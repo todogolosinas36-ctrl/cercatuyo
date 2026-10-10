@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import {
   StyleSheet,
   Text,
@@ -9,18 +9,30 @@ import {
   TextInput,
   Alert,
   Platform,
+  RefreshControl,
 } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import {
-  FARMACIAS_AGUILARES,
   DIRECTORIO_FARMACIAS,
-  TURNOS_FARMACIAS,
   formatearFechaYYYYMMDD,
-  obtenerFarmaciasDeTurno,
   obtenerFarmaciasDeTurnoHoy,
-  obtenerFechaTurnoActivo,
+  obtenerLocalidadesDisponibles,
+  obtenerInfoTurnoOficial,
   Farmacia,
+  FarmaciasTurnoJSON,
 } from '@/data/farmacias';
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CONFIGURACIÓN DE URL RAW DE GITHUB (AUTOMATIZACIÓN CON ACTIONS)
+// Personaliza tu usuario, repositorio y rama aquí:
+// ─────────────────────────────────────────────────────────────────────────────
+export const GITHUB_USER = 'todogolosinas36-ctrl'; // Usuario de GitHub
+export const GITHUB_REPO = 'cercatuyo';           // Nombre del repositorio
+export const GITHUB_BRANCH = 'master';            // Rama principal ('master' o 'main')
+
+// URL directa 'Raw' al archivo generado por GitHub Actions
+export const URL_FARMACIAS_RAW = `https://raw.githubusercontent.com/${GITHUB_USER}/${GITHUB_REPO}/${GITHUB_BRANCH}/data/farmaciasTurno.json`;
+// ─────────────────────────────────────────────────────────────────────────────
 
 // Formateador de fecha amigable en español
 function formatearFechaAmigable(fecha: Date = new Date()): string {
@@ -39,10 +51,17 @@ function formatearFechaAmigable(fecha: Date = new Date()): string {
 }
 
 // Formateador visual de teléfono para mostrar en pantalla
-function formatearTelefonoVisual(telefono: string): string {
+function formatearTelefonoVisual(telefono?: string): string {
+  if (!telefono) return 'Sin teléfono registrado';
   const limpio = telefono.replace(/\D/g, '');
   if (limpio.startsWith('03865') && limpio.length === 11) {
     return `(03865) ${limpio.slice(5, 7)}-${limpio.slice(7)}`;
+  }
+  if (limpio.startsWith('0381') && limpio.length === 11) {
+    return `(0381) ${limpio.slice(4, 7)}-${limpio.slice(7)}`;
+  }
+  if (limpio.startsWith('03863') && limpio.length === 11) {
+    return `(03863) ${limpio.slice(5, 7)}-${limpio.slice(7)}`;
   }
   if (limpio.length === 10) {
     return `(${limpio.slice(0, 4)}) ${limpio.slice(4, 7)}-${limpio.slice(7)}`;
@@ -51,47 +70,153 @@ function formatearTelefonoVisual(telefono: string): string {
 }
 
 export default function FarmaciasScreen() {
+  const [localidadSeleccionada, setLocalidadSeleccionada] = useState<string>('Aguilares');
   const [busqueda, setBusqueda] = useState('');
-  const [filtroDia, setFiltroDia] = useState<'hoy' | 'manana'>('hoy');
+
+  // Estados de datos remotos desde GitHub y sincronización
+  const [datosRemotos, setDatosRemotos] = useState<FarmaciasTurnoJSON | null>(null);
+  const [refrescando, setRefrescando] = useState<boolean>(false);
+  const [origenDatos, setOrigenDatos] = useState<'en_linea' | 'local'>('local');
+  const [horaSincronizacion, setHoraSincronizacion] = useState<string>('');
 
   // Fecha del sistema
   const fechaHoy = useMemo(() => new Date(), []);
-  const fechaManana = useMemo(() => {
-    const m = new Date();
-    m.setDate(m.getDate() + 1);
-    return m;
+  const fechaHoyStr = useMemo(() => formatearFechaYYYYMMDD(fechaHoy), [fechaHoy]);
+
+  // Metadatos oficiales de COFATUC locales
+  const infoTurnoOficialLocal = useMemo(() => obtenerInfoTurnoOficial(), []);
+
+  // Función para descargar los datos directamente desde GitHub Raw
+  const cargarDatosDesdeGitHub = useCallback(async (esPullToRefresh: boolean = false) => {
+    if (esPullToRefresh) {
+      setRefrescando(true);
+    }
+
+    try {
+      // Parámetro de timestamp para evitar que la red o CDN almacene en caché una respuesta vieja
+      const urlConCacheBuster = `${URL_FARMACIAS_RAW}?_nocache=${Date.now()}`;
+      const respuesta = await fetch(urlConCacheBuster, {
+        headers: {
+          Accept: 'application/json',
+        },
+      });
+
+      if (respuesta.ok) {
+        const json: FarmaciasTurnoJSON = await respuesta.json();
+        const lista = json.farmacias || json.farmaciasDeTurno;
+
+        if (Array.isArray(lista) && lista.length > 0) {
+          setDatosRemotos(json);
+          setOrigenDatos('en_linea');
+          const ahora = new Date();
+          const hh = String(ahora.getHours()).padStart(2, '0');
+          const mm = String(ahora.getMinutes()).padStart(2, '0');
+          setHoraSincronizacion(`${hh}:${mm}`);
+          return;
+        }
+      }
+      // Si la respuesta no es OK, conservamos modo local de respaldo
+      setOrigenDatos('local');
+    } catch {
+      // Sin conexión o fallo de red -> Activación transparente del fallback local
+      setOrigenDatos('local');
+    } finally {
+      setRefrescando(false);
+    }
   }, []);
 
-  const fechaMananaStr = useMemo(() => formatearFechaYYYYMMDD(fechaManana), [fechaManana]);
+  // Carga inicial al montar la pantalla
+  useEffect(() => {
+    cargarDatosDesdeGitHub(false);
+  }, [cargarDatosDesdeGitHub]);
 
-  // Farmacias de turno consumidas mediante la función auxiliar oficial obtenerFarmaciasDeTurnoHoy
-  const farmaciasDeTurno = useMemo(() => {
-    if (filtroDia === 'hoy') {
-      return obtenerFarmaciasDeTurnoHoy(fechaHoy, 'Aguilares');
+  // Lista de localidades disponibles (combina datos remotos si están disponibles o locales)
+  const listaLocalidades = useMemo(() => {
+    const locsRemotas = datosRemotos?.localidades;
+    if (Array.isArray(locsRemotas) && locsRemotas.length > 0) {
+      const sinAguilares = locsRemotas.filter(l => l.toLowerCase() !== 'aguilares');
+      return ['Todas', 'Aguilares', ...sinAguilares];
     }
-    return obtenerFarmaciasDeTurnoHoy(fechaMananaStr, 'Aguilares');
-  }, [filtroDia, fechaHoy, fechaMananaStr]);
+    const locsLocales = obtenerLocalidadesDisponibles();
+    return ['Todas', ...locsLocales];
+  }, [datosRemotos]);
 
-  // IDs de las farmacias que están de turno HOY (para destacar en el directorio general)
-  const idsDeTurnoHoy = useMemo(() => {
-    const turnoHoy = obtenerFarmaciasDeTurnoHoy(fechaHoy, 'Aguilares');
-    return turnoHoy.map(f => f.id);
-  }, [fechaHoy]);
+  // Farmacias de guardia activas en toda la provincia para el día de hoy
+  const todasDeTurnoHoy = useMemo(() => {
+    const remotas = datosRemotos?.farmacias || datosRemotos?.farmaciasDeTurno;
+    if (Array.isArray(remotas) && remotas.length > 0) {
+      return remotas;
+    }
+    // Fallback local
+    return obtenerFarmaciasDeTurnoHoy(fechaHoy, 'Todas');
+  }, [datosRemotos, fechaHoy]);
 
-  // Filtrado del directorio general por término de búsqueda
-  const directorioFiltrado = useMemo(() => {
-    if (!busqueda.trim()) return FARMACIAS_AGUILARES;
-    const termino = busqueda.toLowerCase().trim();
-    return FARMACIAS_AGUILARES.filter(
-      f =>
-        f.nombre.toLowerCase().includes(termino) ||
-        f.direccion.toLowerCase().includes(termino) ||
-        f.telefono.includes(termino)
+  // Farmacias de guardia para la localidad seleccionada
+  const farmaciasDeTurno = useMemo(() => {
+    if (localidadSeleccionada === 'Todas') {
+      return todasDeTurnoHoy;
+    }
+    return todasDeTurnoHoy.filter(
+      f => (f.localidad || f.ubicacion || '').toLowerCase() === localidadSeleccionada.toLowerCase()
     );
-  }, [busqueda]);
+  }, [todasDeTurnoHoy, localidadSeleccionada]);
 
-  // Acción: Realizar llamada telefónica directa
+  // IDs de farmacias que están de turno hoy (para marcar en directorio)
+  const idsDeTurnoHoy = useMemo(() => {
+    return todasDeTurnoHoy.map(f => f.id);
+  }, [todasDeTurnoHoy]);
+
+  // Conteo de farmacias de guardia por localidad para las pestañas
+  const conteoPorLocalidad = useMemo(() => {
+    const mapa: Record<string, number> = { Todas: todasDeTurnoHoy.length };
+    todasDeTurnoHoy.forEach(f => {
+      const loc = f.localidad || f.ubicacion || 'Aguilares';
+      mapa[loc] = (mapa[loc] || 0) + 1;
+    });
+    return mapa;
+  }, [todasDeTurnoHoy]);
+
+  // Directorio general de farmacias
+  const directorioFiltrado = useMemo(() => {
+    let lista = DIRECTORIO_FARMACIAS;
+
+    // Si tenemos farmacias remotas, aseguramos que estén en el directorio
+    const remotas = datosRemotos?.farmacias || datosRemotos?.farmaciasDeTurno;
+    if (Array.isArray(remotas)) {
+      const idsExistentes = new Set(lista.map(f => f.id));
+      const nuevas = remotas.filter(r => !idsExistentes.has(r.id));
+      if (nuevas.length > 0) {
+        lista = [...nuevas, ...lista];
+      }
+    }
+
+    if (localidadSeleccionada !== 'Todas') {
+      lista = lista.filter(
+        f => (f.localidad || f.ubicacion || '').toLowerCase() === localidadSeleccionada.toLowerCase()
+      );
+    }
+
+    if (busqueda.trim()) {
+      const q = busqueda.toLowerCase().trim();
+      lista = lista.filter(
+        f =>
+          f.nombre.toLowerCase().includes(q) ||
+          f.direccion.toLowerCase().includes(q) ||
+          (f.localidad || f.ubicacion || '').toLowerCase().includes(q) ||
+          f.telefono.includes(q)
+      );
+    }
+
+    return lista;
+  }, [localidadSeleccionada, busqueda, datosRemotos]);
+
+  // Acción: Llamada telefónica directa
   const handleLlamar = async (farmacia: Farmacia) => {
+    if (!farmacia.telefono) {
+      Alert.alert(farmacia.nombre, 'Esta farmacia no posee número de teléfono registrado.');
+      return;
+    }
+
     const numero = farmacia.telefono.replace(/\s+/g, '');
     const url = `tel:${numero}`;
 
@@ -117,24 +242,25 @@ export default function FarmaciasScreen() {
     }
   };
 
-  // Acción: Abrir ubicación en Google Maps
+  // Acción: Abrir en Google Maps
   const handleAbrirMapa = async (farmacia: Farmacia) => {
+    const localidad = farmacia.localidad || farmacia.ubicacion || 'Tucuman';
     const url =
       farmacia.linkMapa ||
       `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
-        `${farmacia.nombre} ${farmacia.direccion} Aguilares Tucuman`
+        `${farmacia.nombre} ${farmacia.direccion} ${localidad} Tucuman`
       )}`;
 
     try {
       await Linking.openURL(url);
     } catch {
-      Alert.alert('Error', 'No se pudo abrir el mapa.');
+      Alert.alert('Error', 'No se pudo abrir la aplicación de mapas.');
     }
   };
 
-  // Acción: Abrir portal oficial del Colegio de Farmacéuticos de Tucumán (COFATUC)
+  // Acción: Abrir sitio oficial de COFATUC
   const handleAbrirWebCofatuc = async () => {
-    const url = 'https://cofatuc.org.ar';
+    const url = 'https://cofatuc.org.ar/farmacias-de-turno/';
     try {
       if (Platform.OS === 'web') {
         window.open(url, '_blank');
@@ -151,16 +277,44 @@ export default function FarmaciasScreen() {
       style={styles.container}
       contentContainerStyle={styles.contentContainer}
       showsVerticalScrollIndicator={false}
+      refreshControl={
+        <RefreshControl
+          refreshing={refrescando}
+          onRefresh={() => cargarDatosDesdeGitHub(true)}
+          colors={['#2563EB', '#10B981']}
+          tintColor="#2563EB"
+          title="Actualizando turnos desde GitHub..."
+          titleColor="#64748B"
+        />
+      }
     >
-      {/* Encabezado Principal y Ubicación */}
+      {/* Encabezado Principal y Badges de Estado */}
       <View style={styles.header}>
-        <View style={styles.cityBadge}>
-          <Ionicons name="location-sharp" size={14} color="#0284C7" />
-          <Text style={styles.cityBadgeText}>Aguilares, Tucumán</Text>
+        <View style={styles.topBadgesRow}>
+          <View style={styles.provinceBadge}>
+            <Ionicons name="medical" size={13} color="#0284C7" />
+            <Text style={styles.provinceBadgeText}>Tucumán</Text>
+          </View>
+
+          {/* Badge de Sincronización Remota (GitHub Actions) vs Local */}
+          {origenDatos === 'en_linea' ? (
+            <View style={styles.liveSyncBadge}>
+              <View style={styles.syncDotOnline} />
+              <Text style={styles.syncTextOnline}>
+                En línea (GitHub Actions){horaSincronizacion ? ` • ${horaSincronizacion} hs` : ''}
+              </Text>
+            </View>
+          ) : (
+            <View style={styles.fallbackSyncBadge}>
+              <View style={styles.syncDotOffline} />
+              <Text style={styles.syncTextOffline}>Datos locales (Respaldo)</Text>
+            </View>
+          )}
         </View>
 
         <Text style={styles.mainTitle}>Farmacias de Turno</Text>
 
+        {/* Tarjeta de Fecha Actual */}
         <View style={styles.dateCard}>
           <View style={styles.dateIconWrapper}>
             <Ionicons name="calendar-outline" size={18} color="#2563EB" />
@@ -169,84 +323,124 @@ export default function FarmaciasScreen() {
             <Text style={styles.dateLabel}>Fecha actual</Text>
             <Text style={styles.dateText}>{formatearFechaAmigable(fechaHoy)}</Text>
           </View>
+
+          {/* Botón táctil para refrescar datos */}
+          <TouchableOpacity
+            style={styles.miniRefreshBtn}
+            onPress={() => cargarDatosDesdeGitHub(true)}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="reload" size={16} color="#2563EB" />
+          </TouchableOpacity>
         </View>
       </View>
 
-      {/* Selector de Fecha de Turno (Hoy vs Mañana) */}
-      <View style={styles.filterTabs}>
-        <TouchableOpacity
-          style={[styles.tabButton, filtroDia === 'hoy' && styles.tabButtonActive]}
-          onPress={() => setFiltroDia('hoy')}
-          activeOpacity={0.7}
-        >
-          <Ionicons
-            name="flame"
-            size={16}
-            color={filtroDia === 'hoy' ? '#FFFFFF' : '#64748B'}
-          />
-          <Text
-            style={[styles.tabButtonText, filtroDia === 'hoy' && styles.tabButtonTextActive]}
-          >
-            De Turno Hoy
+      {/* AVISO DE VIGENCIA OFICIAL DE COFATUC (08:00 a 08:00 hs) */}
+      <View style={styles.vigenciaBanner}>
+        <Ionicons name="time" size={18} color="#B45309" />
+        <View style={{ flex: 1 }}>
+          <Text style={styles.vigenciaTitle}>Horario de guardia oficial de 24 hs</Text>
+          <Text style={styles.vigenciaSubtitle}>
+            {datosRemotos?.horarioVigencia || infoTurnoOficialLocal.vigencia}
           </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.tabButton, filtroDia === 'manana' && styles.tabButtonActiveSecondary]}
-          onPress={() => setFiltroDia('manana')}
-          activeOpacity={0.7}
-        >
-          <Ionicons
-            name="time-outline"
-            size={16}
-            color={filtroDia === 'manana' ? '#FFFFFF' : '#64748B'}
-          />
-          <Text
-            style={[
-              styles.tabButtonText,
-              filtroDia === 'manana' && styles.tabButtonTextActive,
-            ]}
-          >
-            Turno de Mañana
-          </Text>
-        </TouchableOpacity>
+        </View>
       </View>
 
-      {/* SECCIÓN DESTACADA: FARMACIA DE TURNO */}
+      {/* SELECTOR HORIZONTAL DE LOCALIDADES (CHIPS) */}
+      <View style={styles.chipsSection}>
+        <View style={styles.chipsHeader}>
+          <Text style={styles.chipsSectionTitle}>Localidades de la provincia:</Text>
+          <Text style={styles.chipsSectionHint}>Desliza para elegir</Text>
+        </View>
+
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.chipsScrollContent}
+        >
+          {listaLocalidades.map(loc => {
+            const esActiva = localidadSeleccionada === loc;
+            const cantidad = conteoPorLocalidad[loc] || 0;
+
+            return (
+              <TouchableOpacity
+                key={loc}
+                style={[styles.chipButton, esActiva && styles.chipButtonActive]}
+                onPress={() => setLocalidadSeleccionada(loc)}
+                activeOpacity={0.7}
+              >
+                <Ionicons
+                  name={loc === 'Todas' ? 'map' : 'location'}
+                  size={13}
+                  color={esActiva ? '#FFFFFF' : '#64748B'}
+                />
+                <Text style={[styles.chipText, esActiva && styles.chipTextActive]}>
+                  {loc}
+                </Text>
+                {cantidad > 0 && (
+                  <View
+                    style={[
+                      styles.chipCountBadge,
+                      esActiva && styles.chipCountBadgeActive,
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.chipCountText,
+                        esActiva && styles.chipCountTextActive,
+                      ]}
+                    >
+                      {cantidad}
+                    </Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+      </View>
+
+      {/* SECCIÓN DESTACADA: FARMACIAS DE TURNO HOY */}
       <View style={styles.sectionTurno}>
         <View style={styles.turnoHeaderRow}>
           <View style={styles.liveIndicator}>
             <View style={styles.pulseDot} />
-            <Text style={styles.liveText}>
-              {filtroDia === 'hoy' ? 'DE TURNO HOY' : 'TURNO PRÓXIMO'}
-            </Text>
+            <Text style={styles.liveText}>DE TURNO HOY</Text>
           </View>
-          <View style={styles.badge24h}>
-            <Text style={styles.badge24hText}>24 Horas</Text>
+          <View style={styles.locSelectedBadge}>
+            <Ionicons name="navigate-circle" size={13} color="#047857" />
+            <Text style={styles.locSelectedText}>
+              {localidadSeleccionada === 'Todas' ? 'Toda la provincia' : localidadSeleccionada}
+            </Text>
           </View>
         </View>
 
-        <Text style={styles.shiftNotice}>
-          Horario de guardia: 08:00 hs a 08:00 hs del día siguiente.
-        </Text>
-
         {farmaciasDeTurno.length > 0 ? (
-          farmaciasDeTurno.map(farmacia => (
-            <View key={farmacia.id} style={styles.heroCard}>
+          farmaciasDeTurno.map((farmacia, index) => (
+            <View key={farmacia.id || index} style={styles.heroCard}>
               <View style={styles.heroCardTop}>
                 <View style={styles.heroIconWrapper}>
                   <Ionicons name="medkit" size={26} color="#059669" />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.heroTitle}>{farmacia.nombre}</Text>
-                  <View style={styles.heroInfoRow}>
-                    <Ionicons name="location" size={14} color="#64748B" />
-                    <Text style={styles.heroSubtitle}>
-                      {farmacia.direccion}, {farmacia.ubicacion}
+                  <View style={styles.heroTitleRow}>
+                    <Text style={styles.heroTitle}>{farmacia.nombre}</Text>
+                  </View>
+
+                  <View style={styles.heroLocationPill}>
+                    <Ionicons name="location-sharp" size={12} color="#0369A1" />
+                    <Text style={styles.heroLocationPillText}>
+                      {farmacia.localidad || farmacia.ubicacion || 'Aguilares'}
                     </Text>
                   </View>
+
                   <View style={styles.heroInfoRow}>
-                    <Ionicons name="call" size={14} color="#64748B" />
+                    <Ionicons name="navigate-outline" size={14} color="#64748B" />
+                    <Text style={styles.heroSubtitle}>{farmacia.direccion}</Text>
+                  </View>
+
+                  <View style={styles.heroInfoRow}>
+                    <Ionicons name="call" size={14} color="#059669" />
                     <Text style={styles.heroPhone}>
                       {formatearTelefonoVisual(farmacia.telefono)}
                     </Text>
@@ -257,12 +451,18 @@ export default function FarmaciasScreen() {
               {/* Botones de acción directa */}
               <View style={styles.heroActionsRow}>
                 <TouchableOpacity
-                  style={[styles.actionBtn, styles.callBtn]}
+                  style={[
+                    styles.actionBtn,
+                    styles.callBtn,
+                    !farmacia.telefono && styles.actionBtnDisabled,
+                  ]}
                   onPress={() => handleLlamar(farmacia)}
                   activeOpacity={0.8}
                 >
-                  <Ionicons name="call" size={18} color="#FFFFFF" />
-                  <Text style={styles.actionBtnText}>Llamar ahora</Text>
+                  <Ionicons name="call" size={17} color="#FFFFFF" />
+                  <Text style={styles.actionBtnText}>
+                    {farmacia.telefono ? 'Llamar a farmacia' : 'Sin teléfono'}
+                  </Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity
@@ -270,7 +470,7 @@ export default function FarmaciasScreen() {
                   onPress={() => handleAbrirMapa(farmacia)}
                   activeOpacity={0.8}
                 >
-                  <MaterialCommunityIcons name="google-maps" size={20} color="#FFFFFF" />
+                  <MaterialCommunityIcons name="google-maps" size={19} color="#FFFFFF" />
                   <Text style={styles.actionBtnText}>Cómo llegar</Text>
                 </TouchableOpacity>
               </View>
@@ -278,36 +478,40 @@ export default function FarmaciasScreen() {
           ))
         ) : (
           <View style={styles.emptyCard}>
-            <Ionicons name="alert-circle-outline" size={32} color="#94A3B8" />
+            <Ionicons name="information-circle-outline" size={32} color="#94A3B8" />
             <Text style={styles.emptyText}>
-              No hay turnos registrados para esta fecha en Aguilares.
+              No se encontraron farmacias de guardia registradas para{' '}
+              <Text style={{ fontWeight: '700' }}>{localidadSeleccionada}</Text> en esta fecha.
             </Text>
           </View>
         )}
       </View>
 
-      {/* SECCIÓN DIRECTORIO COMPLETO */}
+      {/* SECCIÓN DIRECTORIO DE FARMACIAS */}
       <View style={styles.directorySection}>
         <View style={styles.directoryHeader}>
           <View>
-            <Text style={styles.directoryTitle}>Todas las Farmacias</Text>
-            <Text style={styles.directorySubtitle}>
-              Directorio de la ciudad de Aguilares
+            <Text style={styles.directoryTitle}>
+              {localidadSeleccionada === 'Todas'
+                ? 'Todas las Farmacias de la Provincia'
+                : `Farmacias en ${localidadSeleccionada}`}
             </Text>
+            <Text style={styles.directorySubtitle}>Directorio de locales</Text>
           </View>
           <View style={styles.countBadge}>
             <Text style={styles.countBadgeText}>
-              {directorioFiltrado.length} {directorioFiltrado.length === 1 ? 'local' : 'locales'}
+              {directorioFiltrado.length}{' '}
+              {directorioFiltrado.length === 1 ? 'farmacia' : 'farmacias'}
             </Text>
           </View>
         </View>
 
         {/* Buscador de Farmacias */}
         <View style={styles.searchBar}>
-          <Ionicons name="search-outline" size={20} color="#94A3B8" />
+          <Ionicons name="search-outline" size={19} color="#94A3B8" />
           <TextInput
             style={styles.searchInput}
-            placeholder="Buscar por nombre o calle..."
+            placeholder={`Buscar en ${localidadSeleccionada === 'Todas' ? 'Tucumán' : localidadSeleccionada}...`}
             placeholderTextColor="#94A3B8"
             value={busqueda}
             onChangeText={setBusqueda}
@@ -335,21 +539,29 @@ export default function FarmaciasScreen() {
               <View style={styles.cardHeader}>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.cardPharmacyName}>{farmacia.nombre}</Text>
-                  <View style={styles.cardInfoRow}>
-                    <Ionicons name="location-outline" size={14} color="#64748B" />
-                    <Text style={styles.cardAddress}>
-                      {farmacia.direccion}, {farmacia.ubicacion}
+
+                  <View style={styles.cardCityRow}>
+                    <Ionicons name="location" size={12} color="#0284C7" />
+                    <Text style={styles.cardCityText}>
+                      {farmacia.localidad || farmacia.ubicacion || 'Aguilares'}
                     </Text>
                   </View>
+
                   <View style={styles.cardInfoRow}>
-                    <Ionicons name="call-outline" size={14} color="#64748B" />
+                    <Ionicons name="navigate-outline" size={13} color="#64748B" />
+                    <Text style={styles.cardAddress}>{farmacia.direccion}</Text>
+                  </View>
+
+                  <View style={styles.cardInfoRow}>
+                    <Ionicons name="call-outline" size={13} color="#64748B" />
                     <Text style={styles.cardNumber}>
                       {formatearTelefonoVisual(farmacia.telefono)}
                     </Text>
                   </View>
+
                   {farmacia.horarioHabitual && (
                     <View style={styles.cardInfoRow}>
-                      <Ionicons name="time-outline" size={13} color="#94A3B8" />
+                      <Ionicons name="time-outline" size={12} color="#94A3B8" />
                       <Text style={styles.cardHoursText}>
                         Horario: {farmacia.horarioHabitual}
                       </Text>
@@ -368,12 +580,27 @@ export default function FarmaciasScreen() {
               {/* Botones de acción en cada ítem */}
               <View style={styles.cardActionsRow}>
                 <TouchableOpacity
-                  style={[styles.smallActionBtn, styles.smallCallBtn]}
+                  style={[
+                    styles.smallActionBtn,
+                    styles.smallCallBtn,
+                    !farmacia.telefono && styles.smallActionBtnDisabled,
+                  ]}
                   onPress={() => handleLlamar(farmacia)}
                   activeOpacity={0.7}
                 >
-                  <Ionicons name="call" size={15} color="#059669" />
-                  <Text style={styles.smallCallBtnText}>Llamar</Text>
+                  <Ionicons
+                    name="call"
+                    size={14}
+                    color={farmacia.telefono ? '#059669' : '#94A3B8'}
+                  />
+                  <Text
+                    style={[
+                      styles.smallCallBtnText,
+                      !farmacia.telefono && { color: '#94A3B8' },
+                    ]}
+                  >
+                    {farmacia.telefono ? 'Llamar' : 'Sin tel.'}
+                  </Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity
@@ -381,7 +608,7 @@ export default function FarmaciasScreen() {
                   onPress={() => handleAbrirMapa(farmacia)}
                   activeOpacity={0.7}
                 >
-                  <Ionicons name="navigate-outline" size={15} color="#2563EB" />
+                  <Ionicons name="navigate-outline" size={14} color="#2563EB" />
                   <Text style={styles.smallMapBtnText}>Ver en mapa</Text>
                 </TouchableOpacity>
               </View>
@@ -393,13 +620,13 @@ export default function FarmaciasScreen() {
           <View style={styles.emptyCard}>
             <Ionicons name="search" size={28} color="#94A3B8" />
             <Text style={styles.emptyText}>
-              No se encontraron farmacias con "{busqueda}".
+              No se encontraron farmacias que coincidan con "{busqueda}".
             </Text>
           </View>
         )}
       </View>
 
-      {/* CUADRO DE AVISO ÚTIL: FUENTE OFICIAL Y VERIFICACIÓN PROVINCIAL */}
+      {/* CUADRO INFORMATIVO COFATUC OFICIAL */}
       <View style={styles.officialNoticeCard}>
         <View style={styles.officialNoticeHeader}>
           <View style={styles.officialIconBadge}>
@@ -407,23 +634,22 @@ export default function FarmaciasScreen() {
           </View>
           <View style={{ flex: 1 }}>
             <Text style={styles.officialNoticeTitle}>
-              Turnos Oficiales en Tucumán
+              Colegio de Farmacéuticos de Tucumán
             </Text>
             <Text style={styles.officialNoticeSub}>
-              Aguilares • Concepción • Monteros y toda la provincia
+              Fuente oficial de turnos provinciales (COFATUC)
             </Text>
           </View>
         </View>
 
         <Text style={styles.officialNoticeText}>
-          Los cronogramas de turno son regulados por el{' '}
-          <Text style={styles.boldText}>Colegio de Farmacéuticos de Tucumán (COFATUC)</Text>{' '}
-          en coordinación con los municipios. Los turnos de guardia rigen durante{' '}
-          <Text style={styles.boldText}>24 horas continuas</Text> (de 08:00 hs a 08:00 hs del día siguiente).
+          Los cronogramas de guardia rigen durante <Text style={styles.boldText}>24 horas continuas</Text>{' '}
+          (desde las <Text style={styles.boldText}>08:00 hs</Text> hasta las{' '}
+          <Text style={styles.boldText}>08:00 hs</Text> del día siguiente).
         </Text>
 
         <Text style={styles.officialNoticeSubText}>
-          Para verificar actualizaciones diarias, cronogramas de otras ciudades o cambios excepcionales de último momento, puedes consultar el portal oficial de la institución:
+          Los turnos publicados corresponden a la programación vigente oficial. Ante cualquier duda o urgencia, puedes consultar directamente el portal oficial:
         </Text>
 
         <TouchableOpacity
@@ -431,25 +657,20 @@ export default function FarmaciasScreen() {
           onPress={handleAbrirWebCofatuc}
           activeOpacity={0.8}
         >
-          <Ionicons name="globe-outline" size={18} color="#FFFFFF" />
-          <Text style={styles.officialWebBtnText}>
-            Consultar en Colegio de Farmacéuticos (COFATUC)
-          </Text>
-          <Ionicons name="open-outline" size={16} color="#93C5FD" />
+          <Ionicons name="globe-outline" size={17} color="#FFFFFF" />
+          <Text style={styles.officialWebBtnText}>Ver portal oficial de COFATUC</Text>
+          <Ionicons name="open-outline" size={15} color="#93C5FD" />
         </TouchableOpacity>
       </View>
 
-      {/* Tarjeta Informativa de Emergencias */}
+      {/* Tarjeta de Emergencias */}
       <View style={styles.emergencyCard}>
         <View style={styles.emergencyHeader}>
           <Ionicons name="information-circle" size={20} color="#B45309" />
-          <Text style={styles.emergencyTitle}>Información útil de Emergencia</Text>
+          <Text style={styles.emergencyTitle}>Números Útiles de Emergencia</Text>
         </View>
         <Text style={styles.emergencyDesc}>
-          • Las farmacias de turno prestan servicio las 24 horas continuas (rotación a las 08:00 AM).
-        </Text>
-        <Text style={styles.emergencyDesc}>
-          • Recomendamos realizar una llamada previa antes de dirigirte para verificar disponibilidad de medicación.
+          • Recomendamos realizar una llamada previa antes de dirigirte para verificar disponibilidad.
         </Text>
         <View style={styles.emergencyNumbersRow}>
           <TouchableOpacity
@@ -482,28 +703,75 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     padding: 16,
-    paddingBottom: 36,
+    paddingBottom: 40,
   },
   header: {
-    marginBottom: 16,
+    marginBottom: 12,
   },
-  cityBadge: {
+  topBadgesRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    alignSelf: 'flex-start',
-    backgroundColor: '#E0F2FE',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 20,
+    flexWrap: 'wrap',
+    gap: 8,
     marginBottom: 8,
+  },
+  provinceBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#E0F2FE',
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    borderRadius: 20,
     gap: 4,
   },
-  cityBadgeText: {
-    fontSize: 12,
+  provinceBadgeText: {
+    fontSize: 11,
     fontWeight: '700',
     color: '#0369A1',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
+  },
+  liveSyncBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#DCFCE7',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 20,
+    gap: 5,
+  },
+  syncDotOnline: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#10B981',
+  },
+  syncTextOnline: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#15803D',
+  },
+  fallbackSyncBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F1F5F9',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 20,
+    gap: 5,
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
+  },
+  syncDotOffline: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#64748B',
+  },
+  syncTextOffline: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#475569',
   },
   mainTitle: {
     fontSize: 26,
@@ -542,35 +810,97 @@ const styles = StyleSheet.create({
     color: '#1E293B',
     textTransform: 'capitalize',
   },
-  filterTabs: {
-    flexDirection: 'row',
-    backgroundColor: '#E2E8F0',
-    padding: 4,
-    borderRadius: 12,
-    marginBottom: 16,
-    gap: 6,
+  miniRefreshBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#EFF6FF',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  tabButton: {
-    flex: 1,
+  vigenciaBanner: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 10,
-    borderRadius: 8,
-    gap: 6,
+    backgroundColor: '#FEF3C7',
+    borderWidth: 1,
+    borderColor: '#FDE68A',
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 16,
+    gap: 10,
   },
-  tabButtonActive: {
-    backgroundColor: '#059669',
+  vigenciaTitle: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#92400E',
+    marginBottom: 2,
   },
-  tabButtonActiveSecondary: {
-    backgroundColor: '#2563EB',
+  vigenciaSubtitle: {
+    fontSize: 11,
+    color: '#78350F',
+    lineHeight: 16,
   },
-  tabButtonText: {
+  chipsSection: {
+    marginBottom: 20,
+  },
+  chipsHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  chipsSectionTitle: {
     fontSize: 13,
     fontWeight: '700',
+    color: '#334155',
+  },
+  chipsSectionHint: {
+    fontSize: 11,
+    color: '#94A3B8',
+  },
+  chipsScrollContent: {
+    gap: 8,
+    paddingVertical: 2,
+  },
+  chipButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    paddingVertical: 7,
+    paddingHorizontal: 12,
+    borderRadius: 20,
+    gap: 6,
+  },
+  chipButtonActive: {
+    backgroundColor: '#2563EB',
+    borderColor: '#2563EB',
+  },
+  chipText: {
+    fontSize: 12,
+    fontWeight: '600',
     color: '#475569',
   },
-  tabButtonTextActive: {
+  chipTextActive: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+  },
+  chipCountBadge: {
+    backgroundColor: '#F1F5F9',
+    borderRadius: 10,
+    paddingHorizontal: 5,
+    paddingVertical: 1,
+  },
+  chipCountBadgeActive: {
+    backgroundColor: '#1D4ED8',
+  },
+  chipCountText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#64748B',
+  },
+  chipCountTextActive: {
     color: '#FFFFFF',
   },
   sectionTurno: {
@@ -580,16 +910,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 6,
+    marginBottom: 10,
   },
   liveIndicator: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 7,
   },
   pulseDot: {
-    width: 10,
-    height: 10,
+    width: 9,
+    height: 9,
     borderRadius: 5,
     backgroundColor: '#10B981',
   },
@@ -599,44 +929,44 @@ const styles = StyleSheet.create({
     color: '#065F46',
     letterSpacing: 0.5,
   },
-  badge24h: {
-    backgroundColor: '#DCFCE7',
+  locSelectedBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#ECFDF5',
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 12,
+    gap: 4,
+    borderWidth: 1,
+    borderColor: '#A7F3D0',
   },
-  badge24hText: {
+  locSelectedText: {
     fontSize: 11,
     fontWeight: '700',
-    color: '#15803D',
-  },
-  shiftNotice: {
-    fontSize: 12,
-    color: '#64748B',
-    marginBottom: 12,
+    color: '#047857',
   },
   heroCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 18,
-    padding: 18,
+    padding: 16,
     borderWidth: 2,
     borderColor: '#10B981',
     shadowColor: '#10B981',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 10,
-    elevation: 4,
+    shadowOpacity: 0.12,
+    shadowRadius: 8,
+    elevation: 3,
     marginBottom: 12,
   },
   heroCardTop: {
     flexDirection: 'row',
-    gap: 14,
+    gap: 12,
     alignItems: 'flex-start',
-    marginBottom: 16,
+    marginBottom: 14,
   },
   heroIconWrapper: {
-    width: 50,
-    height: 50,
+    width: 48,
+    height: 48,
     borderRadius: 14,
     backgroundColor: '#ECFDF5',
     justifyContent: 'center',
@@ -644,11 +974,35 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#A7F3D0',
   },
+  heroTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 4,
+  },
   heroTitle: {
-    fontSize: 19,
+    fontSize: 17,
     fontWeight: '800',
     color: '#0F172A',
-    marginBottom: 4,
+    flex: 1,
+  },
+  heroLocationPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    backgroundColor: '#F0F9FF',
+    borderWidth: 1,
+    borderColor: '#BAE6FD',
+    borderRadius: 8,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    gap: 4,
+    marginBottom: 6,
+  },
+  heroLocationPillText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#0369A1',
   },
   heroInfoRow: {
     flexDirection: 'row',
@@ -660,6 +1014,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#475569',
     fontWeight: '500',
+    flex: 1,
   },
   heroPhone: {
     fontSize: 13,
@@ -675,9 +1030,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 12,
+    paddingVertical: 11,
     borderRadius: 12,
-    gap: 8,
+    gap: 7,
   },
   callBtn: {
     backgroundColor: '#059669',
@@ -685,9 +1040,12 @@ const styles = StyleSheet.create({
   mapBtn: {
     backgroundColor: '#2563EB',
   },
+  actionBtnDisabled: {
+    backgroundColor: '#94A3B8',
+  },
   actionBtnText: {
     color: '#FFFFFF',
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '700',
   },
   directorySection: {
@@ -697,22 +1055,23 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-end',
-    marginBottom: 12,
+    marginBottom: 10,
   },
   directoryTitle: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '800',
     color: '#0F172A',
+    flex: 1,
   },
   directorySubtitle: {
-    fontSize: 12,
+    fontSize: 11,
     color: '#64748B',
     marginTop: 1,
   },
   countBadge: {
     backgroundColor: '#E2E8F0',
     paddingHorizontal: 8,
-    paddingVertical: 4,
+    paddingVertical: 3,
     borderRadius: 12,
   },
   countBadgeText: {
@@ -728,13 +1087,13 @@ const styles = StyleSheet.create({
     borderColor: '#E2E8F0',
     borderRadius: 12,
     paddingHorizontal: 12,
-    paddingVertical: 10,
-    marginBottom: 14,
+    paddingVertical: 9,
+    marginBottom: 12,
     gap: 8,
   },
   searchInput: {
     flex: 1,
-    fontSize: 14,
+    fontSize: 13,
     color: '#0F172A',
     padding: 0,
   },
@@ -759,14 +1118,25 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 12,
+    marginBottom: 10,
     gap: 8,
   },
   cardPharmacyName: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '700',
     color: '#0F172A',
-    marginBottom: 4,
+    marginBottom: 2,
+  },
+  cardCityRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginBottom: 3,
+  },
+  cardCityText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#0284C7',
   },
   cardInfoRow: {
     flexDirection: 'row',
@@ -775,11 +1145,11 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   cardAddress: {
-    fontSize: 13,
+    fontSize: 12,
     color: '#475569',
   },
   cardNumber: {
-    fontSize: 13,
+    fontSize: 12,
     color: '#334155',
     fontWeight: '600',
   },
@@ -791,15 +1161,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#D1FAE5',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
     borderRadius: 10,
     gap: 4,
     borderWidth: 1,
     borderColor: '#A7F3D0',
   },
   turnoChipText: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: '700',
     color: '#065F46',
   },
@@ -815,9 +1185,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 8,
+    paddingVertical: 7,
     borderRadius: 8,
-    gap: 6,
+    gap: 5,
     borderWidth: 1,
   },
   smallCallBtn: {
@@ -838,9 +1208,13 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#2563EB',
   },
+  smallActionBtnDisabled: {
+    backgroundColor: '#F1F5F9',
+    borderColor: '#E2E8F0',
+  },
   emptyCard: {
     backgroundColor: '#FFFFFF',
-    padding: 24,
+    padding: 22,
     borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
@@ -852,8 +1226,8 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#64748B',
     textAlign: 'center',
+    lineHeight: 18,
   },
-  // Tarjeta de aviso sobre fuentes oficiales
   officialNoticeCard: {
     backgroundColor: '#F0F9FF',
     borderRadius: 16,
@@ -882,20 +1256,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   officialNoticeTitle: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '800',
     color: '#0369A1',
   },
   officialNoticeSub: {
-    fontSize: 12,
+    fontSize: 11,
     color: '#0284C7',
     fontWeight: '600',
   },
   officialNoticeText: {
-    fontSize: 13,
+    fontSize: 12,
     color: '#334155',
-    lineHeight: 19,
-    marginBottom: 8,
+    lineHeight: 18,
+    marginBottom: 6,
   },
   boldText: {
     fontWeight: '700',
@@ -912,7 +1286,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#0284C7',
-    paddingVertical: 12,
+    paddingVertical: 11,
     paddingHorizontal: 14,
     borderRadius: 10,
     gap: 8,
@@ -921,10 +1295,7 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 13,
     fontWeight: '700',
-    flexShrink: 1,
-    textAlign: 'center',
   },
-  // Tarjeta de emergencias
   emergencyCard: {
     backgroundColor: '#FEF3C7',
     borderRadius: 14,
@@ -944,9 +1315,9 @@ const styles = StyleSheet.create({
     color: '#92400E',
   },
   emergencyDesc: {
-    fontSize: 12,
+    fontSize: 11,
     color: '#78350F',
-    lineHeight: 17,
+    lineHeight: 16,
     marginTop: 2,
   },
   emergencyNumbersRow: {
