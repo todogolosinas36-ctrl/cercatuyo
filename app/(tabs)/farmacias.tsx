@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   StyleSheet,
   Text,
@@ -12,27 +12,15 @@ import {
   RefreshControl,
 } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import farmaciasFallback from '@/data/farmaciasTurno.json';
 import {
   DIRECTORIO_FARMACIAS,
-  formatearFechaYYYYMMDD,
-  obtenerFarmaciasDeTurnoHoy,
-  obtenerLocalidadesDisponibles,
-  obtenerInfoTurnoOficial,
   Farmacia,
-  FarmaciasTurnoJSON,
 } from '@/data/farmacias';
 
-// ─────────────────────────────────────────────────────────────────────────────
-// CONFIGURACIÓN DE URL RAW DE GITHUB (AUTOMATIZACIÓN CON ACTIONS)
-// Personaliza tu usuario, repositorio y rama aquí:
-// ─────────────────────────────────────────────────────────────────────────────
-export const GITHUB_USER = 'todogolosinas36-ctrl'; // Usuario de GitHub
-export const GITHUB_REPO = 'cercatuyo';           // Nombre del repositorio
-export const GITHUB_BRANCH = 'master';            // Rama principal ('master' o 'main')
-
-// URL directa 'Raw' al archivo generado por GitHub Actions
-export const URL_FARMACIAS_RAW = `https://raw.githubusercontent.com/${GITHUB_USER}/${GITHUB_REPO}/${GITHUB_BRANCH}/data/farmaciasTurno.json`;
-// ─────────────────────────────────────────────────────────────────────────────
+// URL cruda (Raw) del archivo JSON en GitHub generado por GitHub Actions
+const URL_FARMACIAS_RAW =
+  'https://raw.githubusercontent.com/todogolosinas36-ctrl/cercatuyo/master/data/farmaciasTurno.json';
 
 // Formateador de fecha amigable en español
 function formatearFechaAmigable(fecha: Date = new Date()): string {
@@ -71,87 +59,68 @@ function formatearTelefonoVisual(telefono?: string): string {
 
 export default function FarmaciasScreen() {
   const [localidadSeleccionada, setLocalidadSeleccionada] = useState<string>('Aguilares');
-  const [busqueda, setBusqueda] = useState('');
+  const [busqueda, setBusqueda] = useState<string>('');
 
-  // Estados de datos remotos desde GitHub y sincronización
-  const [datosRemotos, setDatosRemotos] = useState<FarmaciasTurnoJSON | null>(null);
-  const [refrescando, setRefrescando] = useState<boolean>(false);
-  const [origenDatos, setOrigenDatos] = useState<'en_linea' | 'local'>('local');
-  const [horaSincronizacion, setHoraSincronizacion] = useState<string>('');
+  // Estado local para los datos de farmacias (iniciado con el fallback local estático)
+  const [farmaciasData, setFarmaciasData] = useState<any>(farmaciasFallback);
+  const [refreshing, setRefreshing] = useState<boolean>(false);
+  const [origenRemoto, setOrigenRemoto] = useState<boolean>(false);
 
   // Fecha del sistema
   const fechaHoy = useMemo(() => new Date(), []);
-  const fechaHoyStr = useMemo(() => formatearFechaYYYYMMDD(fechaHoy), [fechaHoy]);
 
-  // Metadatos oficiales de COFATUC locales
-  const infoTurnoOficialLocal = useMemo(() => obtenerInfoTurnoOficial(), []);
-
-  // Función para descargar los datos directamente desde GitHub Raw
-  const cargarDatosDesdeGitHub = useCallback(async (esPullToRefresh: boolean = false) => {
-    if (esPullToRefresh) {
-      setRefrescando(true);
-    }
-
+  // Función asíncrona para consultar el archivo directo desde GitHub Raw
+  const cargarFarmacias = async () => {
+    setRefreshing(true);
     try {
-      // Parámetro de timestamp para evitar que la red o CDN almacene en caché una respuesta vieja
-      const urlConCacheBuster = `${URL_FARMACIAS_RAW}?_nocache=${Date.now()}`;
-      const respuesta = await fetch(urlConCacheBuster, {
-        headers: {
-          Accept: 'application/json',
-        },
+      // Timestamp anti-caché para obtener siempre la última versión subida por el robot
+      const res = await fetch(`${URL_FARMACIAS_RAW}?_t=${Date.now()}`, {
+        headers: { Accept: 'application/json' },
       });
 
-      if (respuesta.ok) {
-        const json: FarmaciasTurnoJSON = await respuesta.json();
-        const lista = json.farmacias || json.farmaciasDeTurno;
-
-        if (Array.isArray(lista) && lista.length > 0) {
-          setDatosRemotos(json);
-          setOrigenDatos('en_linea');
-          const ahora = new Date();
-          const hh = String(ahora.getHours()).padStart(2, '0');
-          const mm = String(ahora.getMinutes()).padStart(2, '0');
-          setHoraSincronizacion(`${hh}:${mm}`);
+      if (res.status === 200) {
+        const data = await res.json();
+        if (data && (Array.isArray(data.farmacias) || Array.isArray(data.farmaciasDeTurno))) {
+          setFarmaciasData(data);
+          setOrigenRemoto(true);
           return;
         }
       }
-      // Si la respuesta no es OK, conservamos modo local de respaldo
-      setOrigenDatos('local');
-    } catch {
-      // Sin conexión o fallo de red -> Activación transparente del fallback local
-      setOrigenDatos('local');
+
+      // Si el status no es 200, aplicar fallback
+      setFarmaciasData(farmaciasFallback);
+      setOrigenRemoto(false);
+    } catch (error) {
+      // En caso de error de red, falta de conexión o 404, usar fallback estático
+      setFarmaciasData(farmaciasFallback);
+      setOrigenRemoto(false);
     } finally {
-      setRefrescando(false);
+      setRefreshing(false);
     }
+  };
+
+  // Carga inicial al montar el componente
+  useEffect(() => {
+    cargarFarmacias();
   }, []);
 
-  // Carga inicial al montar la pantalla
-  useEffect(() => {
-    cargarDatosDesdeGitHub(false);
-  }, [cargarDatosDesdeGitHub]);
-
-  // Lista de localidades disponibles (combina datos remotos si están disponibles o locales)
+  // Lista de localidades disponibles obtenidas del JSON (con 'Todas' y 'Aguilares' priorizada)
   const listaLocalidades = useMemo(() => {
-    const locsRemotas = datosRemotos?.localidades;
-    if (Array.isArray(locsRemotas) && locsRemotas.length > 0) {
-      const sinAguilares = locsRemotas.filter(l => l.toLowerCase() !== 'aguilares');
+    const locs: string[] = farmaciasData?.localidades;
+    if (Array.isArray(locs) && locs.length > 0) {
+      const sinAguilares = locs.filter(l => l.toLowerCase() !== 'aguilares');
       return ['Todas', 'Aguilares', ...sinAguilares];
     }
-    const locsLocales = obtenerLocalidadesDisponibles();
-    return ['Todas', ...locsLocales];
-  }, [datosRemotos]);
+    return ['Todas', 'Aguilares'];
+  }, [farmaciasData]);
 
-  // Farmacias de guardia activas en toda la provincia para el día de hoy
+  // Lista de todas las farmacias en guardia hoy extraídas del JSON
   const todasDeTurnoHoy = useMemo(() => {
-    const remotas = datosRemotos?.farmacias || datosRemotos?.farmaciasDeTurno;
-    if (Array.isArray(remotas) && remotas.length > 0) {
-      return remotas;
-    }
-    // Fallback local
-    return obtenerFarmaciasDeTurnoHoy(fechaHoy, 'Todas');
-  }, [datosRemotos, fechaHoy]);
+    const lista = farmaciasData?.farmacias || farmaciasData?.farmaciasDeTurno;
+    return (Array.isArray(lista) ? lista : []) as Farmacia[];
+  }, [farmaciasData]);
 
-  // Farmacias de guardia para la localidad seleccionada
+  // Farmacias de turno correspondientes a la localidad seleccionada
   const farmaciasDeTurno = useMemo(() => {
     if (localidadSeleccionada === 'Todas') {
       return todasDeTurnoHoy;
@@ -161,7 +130,7 @@ export default function FarmaciasScreen() {
     );
   }, [todasDeTurnoHoy, localidadSeleccionada]);
 
-  // IDs de farmacias que están de turno hoy (para marcar en directorio)
+  // IDs de las farmacias que están de turno hoy (para destacar en el directorio)
   const idsDeTurnoHoy = useMemo(() => {
     return todasDeTurnoHoy.map(f => f.id);
   }, [todasDeTurnoHoy]);
@@ -176,19 +145,18 @@ export default function FarmaciasScreen() {
     return mapa;
   }, [todasDeTurnoHoy]);
 
-  // Directorio general de farmacias
+  // Directorio general de farmacias filtrado por búsqueda y localidad
   const directorioFiltrado = useMemo(() => {
-    let lista = DIRECTORIO_FARMACIAS;
+    let lista = [...DIRECTORIO_FARMACIAS];
+    const idsExistentes = new Set(lista.map(f => f.id));
 
-    // Si tenemos farmacias remotas, aseguramos que estén en el directorio
-    const remotas = datosRemotos?.farmacias || datosRemotos?.farmaciasDeTurno;
-    if (Array.isArray(remotas)) {
-      const idsExistentes = new Set(lista.map(f => f.id));
-      const nuevas = remotas.filter(r => !idsExistentes.has(r.id));
-      if (nuevas.length > 0) {
-        lista = [...nuevas, ...lista];
+    // Incorporar cualquier farmacia detectada en el JSON que no esté en la base estática
+    todasDeTurnoHoy.forEach(f => {
+      if (!idsExistentes.has(f.id)) {
+        lista.push(f);
+        idsExistentes.add(f.id);
       }
-    }
+    });
 
     if (localidadSeleccionada !== 'Todas') {
       lista = lista.filter(
@@ -203,12 +171,12 @@ export default function FarmaciasScreen() {
           f.nombre.toLowerCase().includes(q) ||
           f.direccion.toLowerCase().includes(q) ||
           (f.localidad || f.ubicacion || '').toLowerCase().includes(q) ||
-          f.telefono.includes(q)
+          (f.telefono && f.telefono.includes(q))
       );
     }
 
     return lista;
-  }, [localidadSeleccionada, busqueda, datosRemotos]);
+  }, [localidadSeleccionada, busqueda, todasDeTurnoHoy]);
 
   // Acción: Llamada telefónica directa
   const handleLlamar = async (farmacia: Farmacia) => {
@@ -279,11 +247,11 @@ export default function FarmaciasScreen() {
       showsVerticalScrollIndicator={false}
       refreshControl={
         <RefreshControl
-          refreshing={refrescando}
-          onRefresh={() => cargarDatosDesdeGitHub(true)}
+          refreshing={refreshing}
+          onRefresh={cargarFarmacias}
           colors={['#2563EB', '#10B981']}
           tintColor="#2563EB"
-          title="Actualizando turnos desde GitHub..."
+          title="Actualizando farmacias de turno..."
           titleColor="#64748B"
         />
       }
@@ -296,13 +264,11 @@ export default function FarmaciasScreen() {
             <Text style={styles.provinceBadgeText}>Tucumán</Text>
           </View>
 
-          {/* Badge de Sincronización Remota (GitHub Actions) vs Local */}
-          {origenDatos === 'en_linea' ? (
+          {/* Indicador de Datos En Vivo de GitHub Actions vs Respaldo Local */}
+          {origenRemoto ? (
             <View style={styles.liveSyncBadge}>
               <View style={styles.syncDotOnline} />
-              <Text style={styles.syncTextOnline}>
-                En línea (GitHub Actions){horaSincronizacion ? ` • ${horaSincronizacion} hs` : ''}
-              </Text>
+              <Text style={styles.syncTextOnline}>En línea (GitHub Actions)</Text>
             </View>
           ) : (
             <View style={styles.fallbackSyncBadge}>
@@ -324,10 +290,10 @@ export default function FarmaciasScreen() {
             <Text style={styles.dateText}>{formatearFechaAmigable(fechaHoy)}</Text>
           </View>
 
-          {/* Botón táctil para refrescar datos */}
+          {/* Botón táctil para recargar manualmente */}
           <TouchableOpacity
             style={styles.miniRefreshBtn}
-            onPress={() => cargarDatosDesdeGitHub(true)}
+            onPress={cargarFarmacias}
             activeOpacity={0.7}
           >
             <Ionicons name="reload" size={16} color="#2563EB" />
@@ -335,13 +301,14 @@ export default function FarmaciasScreen() {
         </View>
       </View>
 
-      {/* AVISO DE VIGENCIA OFICIAL DE COFATUC (08:00 a 08:00 hs) */}
+      {/* AVISO DE VIGENCIA OFICIAL COFATUC (08:00 a 08:00 hs) */}
       <View style={styles.vigenciaBanner}>
         <Ionicons name="time" size={18} color="#B45309" />
         <View style={{ flex: 1 }}>
           <Text style={styles.vigenciaTitle}>Horario de guardia oficial de 24 hs</Text>
           <Text style={styles.vigenciaSubtitle}>
-            {datosRemotos?.horarioVigencia || infoTurnoOficialLocal.vigencia}
+            {farmaciasData?.horarioVigencia ||
+              'Rige desde las 08:00 hs del día indicado hasta las 08:00 hs del día siguiente.'}
           </Text>
         </View>
       </View>
