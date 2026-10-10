@@ -2,12 +2,10 @@ name: Actualizar Farmacias de Turno
 
 on:
   schedule:
-    # Se ejecuta todos los días a las 11:05 UTC (08:05 hs de Argentina, 5 minutos después del cambio oficial de turno)
+    # Se ejecuta todos los días a las 11:05 UTC (08:05 hs de Argentina)
     - cron: '5 11 * * *'
   workflow_dispatch:
-    # Permite ejecutar manualmente el flujo desde la pestaña 'Actions' de GitHub
 
-# Permisos necesarios para que el bot pueda realizar push con los cambios
 permissions:
   contents: write
 
