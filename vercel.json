@@ -1,3 +1,7 @@
 {
-  "rewrites": [{ "source": "/(.*)", "destination": "/" }]
+  "cleanUrls": true,
+  "rewrites": [
+    { "source": "/oficios/perfil/:id", "destination": "/oficios/perfil/[id].html" },
+    { "source": "/oficios/:categoria", "destination": "/oficios/[categoria].html" }
+  ]
 }

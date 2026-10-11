@@ -294,9 +294,9 @@ export default function FarmaciasScreen() {
           <View style={{ flex: 1 }}>
             <Text style={styles.dateLabel}>Turno correspondiente al</Text>
             <Text style={styles.dateText}>
-              {isMounted
-                ? (farmaciasData?.fecha ? formatearFechaTurno(farmaciasData.fecha) : formatearFechaAmigable(fechaHoy))
-                : 'Cargando fecha...'}
+              {farmaciasData?.fecha
+                ? formatearFechaTurno(farmaciasData.fecha)
+                : (isMounted ? formatearFechaAmigable(fechaHoy) : 'Cargando fecha...')}
             </Text>
           </View>
 

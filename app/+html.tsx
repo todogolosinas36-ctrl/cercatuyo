@@ -7,11 +7,36 @@ import type { ReactNode } from 'react';
 // do not have access to the DOM or browser APIs.
 export default function Root({ children }: { children: ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="es">
       <head>
         <meta charSet="utf-8" />
         <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
         <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+
+        <title>CercaTuyo — Farmacias, colectivos y oficios en el Sur Tucumano</title>
+        <meta
+          name="description"
+          content="Información útil y actualizada del sur tucumano: farmacias de turno, horarios de colectivos y trabajadores independientes de confianza en Aguilares, Concepción, Monteros y más."
+        />
+
+        {/* Metadatos Open Graph para redes sociales y mensajería */}
+        <meta property="og:title" content="CercaTuyo — Farmacias, colectivos y oficios en el Sur Tucumano" />
+        <meta
+          property="og:description"
+          content="Información útil y actualizada del sur tucumano: farmacias de turno, horarios de colectivos y trabajadores independientes de confianza."
+        />
+        <meta property="og:type" content="website" />
+        <meta property="og:image" content="/og.png" />
+        <meta property="og:locale" content="es_AR" />
+
+        {/* Twitter Card */}
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content="CercaTuyo — Farmacias, colectivos y oficios en el Sur Tucumano" />
+        <meta
+          name="twitter:description"
+          content="Información útil y actualizada del sur tucumano: farmacias de turno, horarios de colectivos y trabajadores independientes de confianza."
+        />
+        <meta name="twitter:image" content="/og.png" />
 
         {/*
           Disable body scrolling on web. This makes ScrollView components work closer to how they do on native.
@@ -21,7 +46,6 @@ export default function Root({ children }: { children: ReactNode }) {
 
         {/* Using raw CSS styles as an escape-hatch to ensure the background color never flickers in dark-mode. */}
         <style dangerouslySetInnerHTML={{ __html: responsiveBackground }} />
-        {/* Add any additional <head> elements that you want globally available on web... */}
       </head>
       <body>{children}</body>
     </html>

@@ -92,10 +92,6 @@ export default function HomeDashboardScreen() {
     registrarVisita();
   }, [isMounted]);
 
-  if (!isMounted) {
-    return <View style={styles.container} />;
-  }
-
   return (
     <ScrollView
       style={styles.container}
@@ -112,7 +108,7 @@ export default function HomeDashboardScreen() {
         <Text style={styles.greetingTitle}>
           Bienvenido a <Text style={styles.greetingBrand}>CercaTuyo</Text>
         </Text>
-        <Text style={styles.greetingDate}>{fechaHoy}</Text>
+        <Text style={styles.greetingDate}>{isMounted ? fechaHoy : 'Cargando fecha...'}</Text>
         <Text style={styles.greetingSubtitle}>
           Tu punto de encuentro con farmacias de guardia, transporte y trabajadores de confianza.
         </Text>

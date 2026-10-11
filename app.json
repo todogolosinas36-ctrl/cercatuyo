@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "mi-app-local",
-    "slug": "mi-app-local",
+    "name": "cercatuyo",
+    "slug": "cercatuyo",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "miapplocal",
+    "scheme": "cercatuyo",
     "userInterfaceStyle": "automatic",
     "ios": {
       "supportsTablet": true
