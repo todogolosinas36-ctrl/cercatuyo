@@ -1,601 +1,592 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   StyleSheet,
   Text,
   View,
-  FlatList,
+  ScrollView,
   TouchableOpacity,
+  Linking,
+  Alert,
+  RefreshControl,
   Platform,
-  Modal,
-  Pressable,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { FontAwesome } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import { TODOS_LOS_VIAJES, PRECIOS_TESA, Viaje } from '@/data/horarios';
+import { Ionicons, MaterialCommunityIcons, FontAwesome5 } from '@expo/vector-icons';
+import farmaciasFallback from '@/data/farmaciasTurno.json';
+import { Farmacia } from '@/data/farmacias';
+import { useOficios } from '@/context/OficiosContext';
 
-const CIUDADES = [
-  'Tucumán',
-  'Lules',
-  'Famaillá',
-  'Fronterita',
-  'Nva. Baviera',
-  'Acheral',
-  'R. Colorado',
-  'Monteros',
-  'Santa Lucía',
-  'Cáceres',
-  'Sgto. Moya',
-  'Río Seco',
-  'Concepción',
-  'Aguilares',
-  'Santa Ana',
-  'Alberdi',
-  'La Cocha',
-  'Los Pizarro',
-  'Río Huacra',
+// URL cruda de GitHub para sincronización en tiempo real
+const URL_FARMACIAS_RAW =
+  'https://raw.githubusercontent.com/todogolosinas36-ctrl/cercatuyo/master/data/farmaciasTurno.json';
+
+// Formato de fecha en español
+function obtenerFechaHoy(): string {
+  const hoy = new Date();
+  const dias = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+  const meses = [
+    'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
+    'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre',
+  ];
+  return `${dias[hoy.getDay()]}, ${hoy.getDate()} de ${meses[hoy.getMonth()]} de ${hoy.getFullYear()}`;
+}
+
+// Categorías destacadas para acceso directo
+const CATEGORIAS_DESTACADAS = [
+  {
+    id: 'albanileria',
+    nombre: 'Albañilería',
+    icono: 'hammer',
+    color: '#D97706',
+    bgColor: '#FEF3C7',
+    subtitulo: 'Construcción y arreglos',
+  },
+  {
+    id: 'plomeria',
+    nombre: 'Plomería',
+    icono: 'faucet',
+    color: '#0284C7',
+    bgColor: '#E0F2FE',
+    subtitulo: 'Instalaciones y fugas',
+  },
+  {
+    id: 'electricidad',
+    nombre: 'Electricidad',
+    icono: 'bolt',
+    color: '#CA8A04',
+    bgColor: '#FEF9C3',
+    subtitulo: 'Urgencias e iluminación',
+  },
+  {
+    id: 'carpinteria',
+    nombre: 'Carpintería',
+    icono: 'tools',
+    color: '#B45309',
+    bgColor: '#FFEDD5',
+    subtitulo: 'Muebles y aberturas',
+  },
 ];
 
-const TIPOS_DIA = ['Lunes a Viernes', 'Sábados', 'Domingos/Feriados'];
+export default function HomeDashboardScreen() {
+  const { trabajadores } = useOficios();
+  const [farmaciasData, setFarmaciasData] = useState<any>(farmaciasFallback);
+  const [refreshing, setRefreshing] = useState(false);
+  const [origenRemoto, setOrigenRemoto] = useState(false);
 
-// Función auxiliar para calcular duración estimada entre dos horas formato HH:mm
-function calcularDuracion(horaSalida: string, horaLlegada: string): string {
-  const [h1, m1] = horaSalida.split(':').map(Number);
-  const [h2, m2] = horaLlegada.split(':').map(Number);
-  let minutosTotales = h2 * 60 + m2 - (h1 * 60 + m1);
-  if (minutosTotales < 0) minutosTotales += 24 * 60; // caso cruce de medianoche
+  // Fecha de hoy
+  const fechaHoy = useMemo(() => obtenerFechaHoy(), []);
 
-  const horas = Math.floor(minutosTotales / 60);
-  const minutos = minutosTotales % 60;
-  if (horas === 0) return `${minutos}m`;
-  if (minutos === 0) return `${horas}h`;
-  return `${horas}h ${minutos}m`;
-}
-
-// Función auxiliar para consultar tarifa
-function obtenerPrecio(origen: string, destino: string): string {
-  const rutaDirecta = `${origen}-${destino}`;
-  const rutaInversa = `${destino}-${origen}`;
-  return PRECIOS_TESA[rutaDirecta] || PRECIOS_TESA[rutaInversa] || 'Consultar';
-}
-
-export default function ColectivosScreen() {
-  const [origen, setOrigen] = useState('Tucumán');
-  const [destino, setDestino] = useState('Concepción');
-  const [tipoDia, setTipoDia] = useState('Lunes a Viernes');
-  const [resultados, setResultados] = useState<Viaje[]>([]);
-  const [haBuscado, setHaBuscado] = useState(false);
-
-  const [modalVisible, setModalVisible] = useState(false);
-  const [seleccionando, setSeleccionando] = useState<'origen' | 'destino' | 'dia'>('origen');
-
-  const abrirSelector = (tipo: 'origen' | 'destino' | 'dia') => {
-    setSeleccionando(tipo);
-    setModalVisible(true);
-  };
-
-  const seleccionarOpcion = (opcion: string) => {
-    if (seleccionando === 'origen') {
-      setOrigen(opcion);
-    } else if (seleccionando === 'destino') {
-      setDestino(opcion);
-    } else if (seleccionando === 'dia') {
-      setTipoDia(opcion);
-    }
-    setModalVisible(false);
-  };
-
-  const intercambiarCiudades = () => {
-    setOrigen(destino);
-    setDestino(origen);
-  };
-
-  const handleBuscar = () => {
-    setHaBuscado(true);
-    const filtrados = TODOS_LOS_VIAJES.filter((viaje) => {
-      // 1. Filtrar por el día seleccionado
-      if (!viaje.dias || !viaje.dias.includes(tipoDia)) {
-        return false;
+  // Carga de farmacias de turno en vivo
+  const cargarFarmacias = async () => {
+    setRefreshing(true);
+    try {
+      const res = await fetch(`${URL_FARMACIAS_RAW}?_t=${Date.now()}`, {
+        headers: { Accept: 'application/json' },
+      });
+      if (res.status === 200) {
+        const data = await res.json();
+        if (data && (Array.isArray(data.farmacias) || Array.isArray(data.farmaciasDeTurno))) {
+          setFarmaciasData(data);
+          setOrigenRemoto(true);
+          return;
+        }
       }
-
-      // 2. Verificar que existan horarios para ambos puntos
-      const horaOrigen = viaje.paradas[origen];
-      const horaDestino = viaje.paradas[destino];
-
-      if (!horaOrigen || !horaDestino) return false;
-
-      // 3. LÓGICA INFALIBLE: Verificar el sentido del viaje
-      // Object.keys(viaje.paradas) nos da el array de paradas en el orden exacto de la ruta
-      const paradasArray = Object.keys(viaje.paradas);
-      const indexOrigen = paradasArray.indexOf(origen);
-      const indexDestino = paradasArray.indexOf(destino);
-
-      // Si el origen aparece en la ruta DESPUÉS del destino, es un colectivo que va en sentido contrario
-      return indexOrigen < indexDestino;
-    });
-
-    filtrados.sort((a, b) => a.paradas[origen].localeCompare(b.paradas[origen]));
-    setResultados(filtrados);
-  };
-
-  const valorActual =
-    seleccionando === 'origen'
-      ? origen
-      : seleccionando === 'destino'
-      ? destino
-      : tipoDia;
-
-  const listaModal = seleccionando === 'dia' ? TIPOS_DIA : CIUDADES;
-
-  const tituloModal =
-    seleccionando === 'origen'
-      ? 'Seleccionar Origen'
-      : seleccionando === 'destino'
-      ? 'Seleccionar Destino'
-      : 'Día de la semana';
-
-  const subtituloModal =
-    seleccionando === 'dia'
-      ? 'Frecuencias según el cronograma de viaje'
-      : 'Elige una parada o localidad';
-
-  const precioActual = obtenerPrecio(origen, destino);
-
-  const renderHeader = () => (
-    <View>
-      {/* Título de la sección (Puerta secreta de administración mediante pulsación prolongada) */}
-      <TouchableOpacity
-        activeOpacity={1}
-        delayLongPress={2000}
-        onLongPress={() => router.push('/admin' as any)}
-      >
-        <View style={styles.topHeader}>
-          <Text style={styles.screenTitle}>Buscador de Horarios</Text>
-          <Text style={styles.screenSubtitle}>Encuentra tu próximo viaje</Text>
-        </View>
-      </TouchableOpacity>
-
-      {/* Tarjeta Flotante de Búsqueda */}
-      <View style={styles.searchCard}>
-        {/* Selector Origen */}
-        <View style={styles.selectorWrapper}>
-          <Text style={styles.fieldLabel}>Origen</Text>
-          <TouchableOpacity
-            style={styles.selectorButton}
-            activeOpacity={0.7}
-            onPress={() => abrirSelector('origen')}>
-            <View style={styles.selectorLeft}>
-              <View style={[styles.circleMarker, { backgroundColor: '#2563EB' }]} />
-              <Text style={styles.selectorText}>{origen}</Text>
-            </View>
-            <FontAwesome name="chevron-down" size={13} color="#94A3B8" />
-          </TouchableOpacity>
-        </View>
-
-        {/* Botón flotante para intercambiar origen/destino */}
-        <View style={styles.dividerRow}>
-          <View style={styles.dashedLine} />
-          <TouchableOpacity
-            style={styles.switchButton}
-            activeOpacity={0.8}
-            onPress={intercambiarCiudades}>
-            <FontAwesome
-              name="exchange"
-              size={13}
-              color="#2563EB"
-              style={{ transform: [{ rotate: '90deg' }] }}
-            />
-          </TouchableOpacity>
-        </View>
-
-        {/* Selector Destino */}
-        <View style={styles.selectorWrapper}>
-          <Text style={styles.fieldLabel}>Destino</Text>
-          <TouchableOpacity
-            style={styles.selectorButton}
-            activeOpacity={0.7}
-            onPress={() => abrirSelector('destino')}>
-            <View style={styles.selectorLeft}>
-              <View style={[styles.circleMarker, { backgroundColor: '#10B981' }]} />
-              <Text style={styles.selectorText}>{destino}</Text>
-            </View>
-            <FontAwesome name="chevron-down" size={13} color="#94A3B8" />
-          </TouchableOpacity>
-        </View>
-
-        {/* Selector Día de la Semana */}
-        <View style={[styles.selectorWrapper, { marginTop: 14 }]}>
-          <Text style={styles.fieldLabel}>Día de la semana</Text>
-          <TouchableOpacity
-            style={styles.selectorButton}
-            activeOpacity={0.7}
-            onPress={() => abrirSelector('dia')}>
-            <View style={styles.selectorLeft}>
-              <View style={[styles.circleMarker, { backgroundColor: '#8B5CF6' }]} />
-              <Text style={styles.selectorText}>{tipoDia}</Text>
-            </View>
-            <FontAwesome name="calendar" size={14} color="#94A3B8" />
-          </TouchableOpacity>
-        </View>
-
-        {/* Botón Primario de Búsqueda */}
-        <TouchableOpacity
-          style={styles.searchButton}
-          activeOpacity={0.85}
-          onPress={handleBuscar}>
-          <FontAwesome name="search" size={16} color="#FFFFFF" />
-          <Text style={styles.searchButtonText}>Buscar Horarios</Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* Título de la lista de resultados */}
-      <View style={styles.resultsHeader}>
-        <Text style={styles.resultsTitle}>Próximas Salidas</Text>
-        <Text style={styles.resultsBadge}>
-          {resultados.length} {resultados.length === 1 ? 'encontrado' : 'encontrados'}
-        </Text>
-      </View>
-    </View>
-  );
-
-  const renderEmptyComponent = () => {
-    if (!haBuscado) {
-      return (
-        <View style={styles.emptyContainer}>
-          <FontAwesome name="compass" size={40} color="#CBD5E1" />
-          <Text style={styles.emptyTitle}>Selecciona origen, destino y día</Text>
-          <Text style={styles.emptySubtitle}>
-            Presiona &quot;Buscar Horarios&quot; para consultar las salidas disponibles
-          </Text>
-        </View>
-      );
+      setFarmaciasData(farmaciasFallback);
+      setOrigenRemoto(false);
+    } catch (e) {
+      setFarmaciasData(farmaciasFallback);
+      setOrigenRemoto(false);
+    } finally {
+      setRefreshing(false);
     }
-
-    return (
-      <View style={styles.emptyContainer}>
-        <FontAwesome name="exclamation-circle" size={40} color="#CBD5E1" />
-        <Text style={styles.emptyTitle}>No hay salidas disponibles</Text>
-        <Text style={styles.emptySubtitle}>
-          No se encontraron viajes directos entre {origen} y {destino} para {tipoDia}
-        </Text>
-      </View>
-    );
   };
 
-  const renderItem = ({ item }: { item: Viaje }) => {
-    const horaSalida = item.paradas?.[origen];
-    const horaLlegada = item.paradas?.[destino];
+  useEffect(() => {
+    cargarFarmacias();
+  }, []);
 
-    if (!horaSalida || !horaLlegada) return null;
-
-    const isTesa = item.empresa === 'TESA';
-    const isDirecto = item.tipo === 'Directo';
-    const duracion = calcularDuracion(horaSalida, horaLlegada);
-
-    return (
-      <View style={styles.tripCard}>
-        {/* Izquierda: Empresa y Tipo */}
-        <View style={styles.companyColumn}>
-          <View
-            style={[
-              styles.companyBadge,
-              { backgroundColor: isTesa ? '#e0f2fe' : '#ffedd5' },
-            ]}>
-            <Text
-              style={[
-                styles.companyName,
-                { color: isTesa ? '#0369a1' : '#c2410c' },
-              ]}>
-              {item.empresa}
-            </Text>
-          </View>
-          <View
-            style={[
-              styles.typeBadge,
-              { backgroundColor: isDirecto ? '#ECFDF5' : '#F1F5F9' },
-            ]}>
-            <Text
-              style={[
-                styles.typeText,
-                { color: isDirecto ? '#047857' : '#475569' },
-              ]}>
-              {item.tipo}
-            </Text>
-          </View>
-        </View>
-
-        {/* Centro: Horarios exactos extraídos de paradas */}
-        <View style={styles.timeColumn}>
-          <View style={styles.timeSchedule}>
-            <Text style={styles.timeMain}>{horaSalida}</Text>
-            <View style={styles.arrowBetween}>
-              <FontAwesome name="long-arrow-right" size={14} color="#94A3B8" />
-            </View>
-            <Text style={styles.timeArrival}>{horaLlegada}</Text>
-          </View>
-          <Text style={styles.scheduleSubtitle}>
-            {origen} ➔ {destino}
-          </Text>
-        </View>
-
-        {/* Derecha: Duración y Pastilla de Precio */}
-        <View style={styles.rightColumn}>
-          <View style={styles.priceBadge}>
-            <FontAwesome name="ticket" size={11} color="#065F46" />
-            <Text style={styles.priceBadgeText}>{precioActual}</Text>
-          </View>
-          <View style={styles.durationContainer}>
-            <FontAwesome name="clock-o" size={11} color="#64748B" />
-            <Text style={styles.durationText}>{duracion}</Text>
-          </View>
-        </View>
-      </View>
+  // Buscar la farmacia de turno priorizando Aguilares
+  const farmaciaTurno = useMemo(() => {
+    const lista = (farmaciasData?.farmacias || farmaciasData?.farmaciasDeTurno || []) as Farmacia[];
+    const deAguilares = lista.find(
+      (f) => (f.localidad || f.ubicacion || '').toLowerCase() === 'aguilares'
     );
+    return deAguilares || lista[0] || null;
+  }, [farmaciasData]);
+
+  // Manejo de llamadas telefónicas
+  const handleLlamar = (telefono?: string) => {
+    if (!telefono) {
+      Alert.alert('Teléfono no disponible', 'Esta farmacia no tiene teléfono registrado.');
+      return;
+    }
+    const limpio = telefono.replace(/\D/g, '');
+    Linking.openURL(`tel:${limpio}`);
+  };
+
+  // Abrir Google Maps
+  const handleAbrirMapa = (linkMapa?: string, nombre?: string, direccion?: string) => {
+    if (linkMapa) {
+      Linking.openURL(linkMapa);
+    } else {
+      const query = encodeURIComponent(`${nombre || 'Farmacia'} ${direccion || ''} Aguilares Tucuman`);
+      Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${query}`);
+    }
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={['left', 'right']}>
-      <FlatList
-        data={resultados}
-        keyExtractor={(item) => item.id}
-        renderItem={renderItem}
-        ListHeaderComponent={renderHeader}
-        ListEmptyComponent={renderEmptyComponent}
-        contentContainerStyle={styles.listContent}
-        showsVerticalScrollIndicator={false}
-      />
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={styles.scrollContent}
+      showsVerticalScrollIndicator={false}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={cargarFarmacias} colors={['#2563EB']} />}
+    >
+      {/* 1. ENCABEZADO Y BIENVENIDA */}
+      <View style={styles.welcomeCard}>
+        <View style={styles.locationPill}>
+          <Ionicons name="location-sharp" size={14} color="#2563EB" />
+          <Text style={styles.locationPillText}>Aguilares y Sur Tucumano</Text>
+        </View>
 
-      {/* Modal dinámico para selección de Ciudad o Día */}
-      <Modal
-        visible={modalVisible}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={() => setModalVisible(false)}>
-        <Pressable
-          style={styles.modalOverlay}
-          onPress={() => setModalVisible(false)}>
-          <Pressable
-            style={styles.modalContainer}
-            onPress={(e) => e.stopPropagation()}>
-            {/* Cabecera del Modal */}
-            <View style={styles.modalHeader}>
-              <View>
-                <Text style={styles.modalTitle}>{tituloModal}</Text>
-                <Text style={styles.modalSubtitle}>{subtituloModal}</Text>
-              </View>
-              <TouchableOpacity
-                style={styles.modalCloseButton}
-                activeOpacity={0.7}
-                onPress={() => setModalVisible(false)}>
-                <FontAwesome name="times" size={16} color="#64748B" />
-              </TouchableOpacity>
+        <Text style={styles.greetingTitle}>
+          Bienvenido a <Text style={styles.greetingBrand}>CercaTuyo</Text>
+        </Text>
+        <Text style={styles.greetingDate}>{fechaHoy}</Text>
+        <Text style={styles.greetingSubtitle}>
+          Tu punto de encuentro con farmacias de guardia, transporte y trabajadores de confianza.
+        </Text>
+      </View>
+
+      {/* 2. WIDGET DESTACADO: FARMACIA DE TURNO */}
+      <View style={styles.sectionHeader}>
+        <View style={styles.sectionTitleRow}>
+          <Ionicons name="medkit" size={20} color="#059669" />
+          <Text style={styles.sectionTitle}>Farmacia de Turno Hoy</Text>
+        </View>
+        <TouchableOpacity
+          style={styles.seeAllButton}
+          onPress={() => router.push('/(tabs)/farmacias' as any)}
+          activeOpacity={0.7}
+        >
+          <Text style={styles.seeAllText}>Ver todas</Text>
+          <Ionicons name="chevron-forward" size={14} color="#2563EB" />
+        </TouchableOpacity>
+      </View>
+
+      {farmaciaTurno ? (
+        <View style={styles.pharmacyCard}>
+          <View style={styles.pharmacyCardHeader}>
+            <View style={styles.pharmacyBadge}>
+              <View style={styles.pulseDot} />
+              <Text style={styles.pharmacyBadgeText}>ABIERTA 24 HS</Text>
             </View>
+            <Text style={styles.pharmacyCityBadge}>
+              {farmaciaTurno.localidad || 'Aguilares'}
+            </Text>
+          </View>
 
-            {/* Lista de Opciones */}
-            <FlatList
-              data={listaModal}
-              keyExtractor={(item) => item}
-              showsVerticalScrollIndicator={false}
-              renderItem={({ item }) => {
-                const isSelected = item === valorActual;
-                return (
-                  <TouchableOpacity
-                    style={[
-                      styles.cityItem,
-                      isSelected && styles.cityItemSelected,
-                    ]}
-                    activeOpacity={0.7}
-                    onPress={() => seleccionarOpcion(item)}>
-                    <View style={styles.cityItemLeft}>
-                      <View
-                        style={[
-                          styles.cityDot,
-                          isSelected && styles.cityDotSelected,
-                          seleccionando === 'dia' && isSelected && { backgroundColor: '#8B5CF6' },
-                        ]}
-                      />
-                      <Text
-                        style={[
-                          styles.cityItemText,
-                          isSelected && styles.cityItemTextSelected,
-                          seleccionando === 'dia' && isSelected && { color: '#6D28D9' },
-                        ]}>
-                        {item}
-                      </Text>
-                    </View>
-                    {isSelected && (
-                      <FontAwesome
-                        name="check"
-                        size={15}
-                        color={seleccionando === 'dia' ? '#8B5CF6' : '#2563EB'}
-                      />
-                    )}
-                  </TouchableOpacity>
-                );
-              }}
-            />
-          </Pressable>
-        </Pressable>
-      </Modal>
-    </SafeAreaView>
+          <Text style={styles.pharmacyName}>{farmaciaTurno.nombre}</Text>
+
+          <View style={styles.pharmacyInfoRow}>
+            <Ionicons name="map-outline" size={16} color="#64748B" />
+            <Text style={styles.pharmacyAddress}>
+              {farmaciaTurno.direccion || 'Dirección no especificada'}
+            </Text>
+          </View>
+
+          {farmaciaTurno.telefono ? (
+            <View style={styles.pharmacyInfoRow}>
+              <Ionicons name="call-outline" size={16} color="#64748B" />
+              <Text style={styles.pharmacyPhone}>{farmaciaTurno.telefono}</Text>
+            </View>
+          ) : null}
+
+          <View style={styles.pharmacyActions}>
+            <TouchableOpacity
+              style={[styles.actionBtn, styles.callBtn]}
+              onPress={() => handleLlamar(farmaciaTurno.telefono)}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="call" size={16} color="#FFFFFF" />
+              <Text style={styles.callBtnText}>Llamar ahora</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.actionBtn, styles.mapBtn]}
+              onPress={() =>
+                handleAbrirMapa(
+                  farmaciaTurno.linkMapa,
+                  farmaciaTurno.nombre,
+                  farmaciaTurno.direccion
+                )
+              }
+              activeOpacity={0.8}
+            >
+              <Ionicons name="navigate-outline" size={16} color="#059669" />
+              <Text style={styles.mapBtnText}>Cómo llegar</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      ) : (
+        <View style={styles.pharmacyCardFallback}>
+          <Ionicons name="time-outline" size={32} color="#94A3B8" />
+          <Text style={styles.pharmacyFallbackText}>Cargando información de farmacia de turno...</Text>
+        </View>
+      )}
+
+      {/* 3. ACCESOS RÁPIDOS A OFICIOS */}
+      <View style={[styles.sectionHeader, { marginTop: 24 }]}>
+        <View style={styles.sectionTitleRow}>
+          <Ionicons name="hammer-outline" size={20} color="#1E3A8A" />
+          <Text style={styles.sectionTitle}>Oficios y Servicios</Text>
+        </View>
+        <TouchableOpacity
+          style={styles.seeAllButton}
+          onPress={() => router.push('/(tabs)/oficios' as any)}
+          activeOpacity={0.7}
+        >
+          <Text style={styles.seeAllText}>Directorio</Text>
+          <Ionicons name="chevron-forward" size={14} color="#2563EB" />
+        </TouchableOpacity>
+      </View>
+      <Text style={styles.sectionSubtitle}>
+        Encuentra trabajadores independientes y profesionales en el sur tucumano
+      </Text>
+
+      <View style={styles.categoriesGrid}>
+        {CATEGORIAS_DESTACADAS.map((cat) => {
+          const cantidadEnCategoria = trabajadores.filter(
+            (t) => t.categoriaId === cat.id
+          ).length;
+
+          return (
+            <TouchableOpacity
+              key={cat.id}
+              style={styles.categoryCard}
+              onPress={() => router.push(`/oficios/${cat.id}` as any)}
+              activeOpacity={0.75}
+            >
+              <View style={[styles.categoryIconWrap, { backgroundColor: cat.bgColor }]}>
+                <FontAwesome5 name={cat.icono} size={22} color={cat.color} />
+              </View>
+              <Text style={styles.categoryName}>{cat.nombre}</Text>
+              <Text style={styles.categorySub}>{cat.subtitulo}</Text>
+              <View style={styles.categoryFooter}>
+                <Text style={styles.categoryCount}>
+                  {cantidadEnCategoria} {cantidadEnCategoria === 1 ? 'contacto' : 'contactos'}
+                </Text>
+                <Ionicons name="arrow-forward-circle" size={16} color={cat.color} />
+              </View>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+
+      {/* 4. ATAJO A COLECTIVOS */}
+      <View style={[styles.sectionHeader, { marginTop: 28 }]}>
+        <View style={styles.sectionTitleRow}>
+          <Ionicons name="bus-outline" size={20} color="#1E3A8A" />
+          <Text style={styles.sectionTitle}>Transporte Interurbano</Text>
+        </View>
+      </View>
+
+      <TouchableOpacity
+        style={styles.transitCard}
+        onPress={() => router.push('/(tabs)/colectivos' as any)}
+        activeOpacity={0.85}
+      >
+        <View style={styles.transitTopRow}>
+          <View style={styles.transitBadge}>
+            <Text style={styles.transitBadgeText}>Tesa & Exprebus</Text>
+          </View>
+          <View style={styles.transitArrowPill}>
+            <Text style={styles.transitArrowText}>Consultar salidas</Text>
+            <Ionicons name="arrow-forward" size={14} color="#2563EB" />
+          </View>
+        </View>
+
+        <Text style={styles.transitTitle}>Horarios y Tarifas en Vivo</Text>
+        <Text style={styles.transitDescription}>
+          Consulta horarios por día hábil, sábados o feriados con cálculo automático de tarifas entre Aguilares, Concepción, Monteros y San Miguel de Tucumán.
+        </Text>
+
+        <View style={styles.transitRouteTags}>
+          <View style={styles.routeTag}>
+            <Ionicons name="location-outline" size={12} color="#1E3A8A" />
+            <Text style={styles.routeTagText}>Aguilares</Text>
+          </View>
+          <Ionicons name="arrow-forward" size={12} color="#94A3B8" />
+          <View style={styles.routeTag}>
+            <Ionicons name="location-outline" size={12} color="#1E3A8A" />
+            <Text style={styles.routeTagText}>Concepción</Text>
+          </View>
+          <Ionicons name="arrow-forward" size={12} color="#94A3B8" />
+          <View style={styles.routeTag}>
+            <Ionicons name="location-outline" size={12} color="#1E3A8A" />
+            <Text style={styles.routeTagText}>Capital</Text>
+          </View>
+        </View>
+      </TouchableOpacity>
+
+      {/* 5. FOOTER INFORMATIVO */}
+      <View style={styles.footerNote}>
+        <Text style={styles.footerNoteBrand}>CercaTuyo</Text>
+        <Text style={styles.footerNoteText}>
+          Conectando a los vecinos de Aguilares, Concepción y todo el sur de Tucumán.
+        </Text>
+      </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F7FA',
+    backgroundColor: '#F8FAFC',
   },
-  listContent: {
-    paddingHorizontal: 20,
+  scrollContent: {
+    paddingHorizontal: 16,
     paddingTop: 12,
-    paddingBottom: 32,
+    paddingBottom: 40,
   },
-  topHeader: {
-    marginBottom: 16,
-    paddingTop: 4,
-  },
-  screenTitle: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#0F172A',
-    letterSpacing: -0.5,
-  },
-  screenSubtitle: {
-    fontSize: 15,
-    color: '#64748B',
-    marginTop: 4,
-    fontWeight: '500',
-  },
-  searchCard: {
+
+  // 1. BIENVENIDA
+  welcomeCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 24,
+    borderRadius: 20,
     padding: 20,
-    marginBottom: 26,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
     ...Platform.select({
       ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 6 },
-        shadowOpacity: 0.08,
-        shadowRadius: 14,
+        shadowColor: '#0F172A',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.05,
+        shadowRadius: 10,
       },
       android: {
-        elevation: 4,
+        elevation: 2,
       },
-      default: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 6 },
-        shadowOpacity: 0.08,
-        shadowRadius: 14,
+      web: {
+        boxShadow: '0 4px 16px rgba(15, 23, 42, 0.05)',
       },
     }),
   },
-  selectorWrapper: {
-    width: '100%',
+  locationPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    backgroundColor: '#EFF6FF',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 20,
+    gap: 6,
+    marginBottom: 12,
   },
-  fieldLabel: {
+  locationPillText: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#64748B',
-    textTransform: 'uppercase',
-    letterSpacing: 0.6,
-    marginBottom: 6,
+    color: '#2563EB',
   },
-  selectorButton: {
+  greetingTitle: {
+    fontSize: 24,
+    fontWeight: '800',
+    color: '#0F172A',
+    letterSpacing: -0.5,
+  },
+  greetingBrand: {
+    color: '#2563EB',
+  },
+  greetingDate: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#64748B',
+    marginTop: 2,
+    marginBottom: 8,
+  },
+  greetingSubtitle: {
+    fontSize: 14,
+    color: '#475569',
+    lineHeight: 20,
+  },
+
+  // SECCIONES GENERALES
+  sectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#F8FAFC',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    borderRadius: 14,
-    paddingHorizontal: 16,
-    paddingVertical: 13,
+    marginBottom: 6,
   },
-  selectorLeft: {
+  sectionTitleRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: 8,
   },
-  circleMarker: {
-    width: 9,
-    height: 9,
-    borderRadius: 5,
-  },
-  selectorText: {
-    fontSize: 16,
-    fontWeight: '600',
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '800',
     color: '#0F172A',
+    letterSpacing: -0.3,
   },
-  dividerRow: {
+  sectionSubtitle: {
+    fontSize: 13,
+    color: '#64748B',
+    marginBottom: 14,
+  },
+  seeAllButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    marginVertical: 6,
-    position: 'relative',
-    height: 24,
+    gap: 3,
   },
-  dashedLine: {
-    position: 'absolute',
-    left: 20,
-    right: 20,
-    height: 1,
-    backgroundColor: '#E2E8F0',
+  seeAllText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#2563EB',
   },
-  switchButton: {
-    backgroundColor: '#EFF6FF',
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    justifyContent: 'center',
-    alignItems: 'center',
+
+  // 2. WIDGET FARMACIA
+  pharmacyCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    padding: 18,
     borderWidth: 1,
-    borderColor: '#BFDBFE',
-    zIndex: 2,
-  },
-  searchButton: {
-    backgroundColor: '#1E3A8A',
-    borderRadius: 16,
-    paddingVertical: 15,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 10,
-    marginTop: 18,
+    borderColor: '#A7F3D0',
     ...Platform.select({
       ios: {
-        shadowColor: '#1E3A8A',
+        shadowColor: '#059669',
         shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 8,
+        shadowOpacity: 0.08,
+        shadowRadius: 10,
       },
       android: {
         elevation: 3,
       },
-      default: {
-        shadowColor: '#1E3A8A',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 8,
+      web: {
+        boxShadow: '0 4px 16px rgba(5, 150, 105, 0.08)',
       },
     }),
   },
-  searchButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '700',
-    letterSpacing: 0.2,
+  pharmacyCardFallback: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    padding: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    gap: 8,
   },
-  resultsHeader: {
+  pharmacyFallbackText: {
+    fontSize: 14,
+    color: '#64748B',
+  },
+  pharmacyCardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  pharmacyBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 14,
-    paddingHorizontal: 4,
+    backgroundColor: '#ECFDF5',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    gap: 6,
   },
-  resultsTitle: {
-    fontSize: 20,
+  pulseDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#10B981',
+  },
+  pharmacyBadgeText: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#059669',
+  },
+  pharmacyCityBadge: {
+    fontSize: 12,
     fontWeight: '700',
-    color: '#0F172A',
-    letterSpacing: -0.3,
+    color: '#475569',
+    backgroundColor: '#F1F5F9',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
   },
-  resultsBadge: {
-    fontSize: 13,
-    color: '#64748B',
+  pharmacyName: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#0F172A',
+    marginBottom: 8,
+  },
+  pharmacyInfoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 6,
+  },
+  pharmacyAddress: {
+    fontSize: 14,
+    color: '#475569',
     fontWeight: '500',
   },
-  tripCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 18,
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-    marginBottom: 12,
+  pharmacyPhone: {
+    fontSize: 14,
+    color: '#475569',
+    fontWeight: '600',
+  },
+  pharmacyActions: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 14,
+  },
+  actionBtn: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    justifyContent: 'center',
+    paddingVertical: 11,
+    borderRadius: 12,
+    gap: 6,
+  },
+  callBtn: {
+    backgroundColor: '#059669',
+  },
+  callBtnText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  mapBtn: {
+    backgroundColor: '#ECFDF5',
+    borderWidth: 1,
+    borderColor: '#A7F3D0',
+  },
+  mapBtnText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#059669',
+  },
+
+  // 3. CUADRÍCULA DE OFICIOS
+  categoriesGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+  categoryCard: {
+    width: '48%',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 18,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
     ...Platform.select({
       ios: {
-        shadowColor: '#000',
+        shadowColor: '#0F172A',
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.04,
         shadowRadius: 8,
@@ -603,224 +594,140 @@ const styles = StyleSheet.create({
       android: {
         elevation: 2,
       },
-      default: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.04,
-        shadowRadius: 8,
+      web: {
+        boxShadow: '0 2px 10px rgba(15, 23, 42, 0.04)',
       },
     }),
   },
-  companyColumn: {
-    alignItems: 'flex-start',
-    gap: 6,
-    minWidth: 76,
-  },
-  companyBadge: {
-    paddingHorizontal: 9,
-    paddingVertical: 4,
-    borderRadius: 8,
-  },
-  companyName: {
-    fontSize: 13,
-    fontWeight: '800',
-    letterSpacing: 0.4,
-  },
-  typeBadge: {
-    paddingHorizontal: 7,
-    paddingVertical: 2,
-    borderRadius: 6,
-  },
-  typeText: {
-    fontSize: 11,
-    fontWeight: '600',
-  },
-  timeColumn: {
-    flex: 1,
+  categoryIconWrap: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 6,
+    marginBottom: 10,
   },
-  timeSchedule: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  timeMain: {
-    fontSize: 18,
+  categoryName: {
+    fontSize: 16,
     fontWeight: '800',
     color: '#0F172A',
-    letterSpacing: -0.5,
+    marginBottom: 2,
   },
-  arrowBetween: {
-    paddingHorizontal: 2,
-  },
-  timeArrival: {
-    fontSize: 15,
-    fontWeight: '600',
+  categorySub: {
+    fontSize: 12,
     color: '#64748B',
+    marginBottom: 12,
   },
-  scheduleSubtitle: {
-    fontSize: 11,
-    color: '#94A3B8',
-    marginTop: 2,
-    fontWeight: '500',
-  },
-  rightColumn: {
-    alignItems: 'flex-end',
-    gap: 6,
-    minWidth: 84,
-  },
-  priceBadge: {
+  categoryFooter: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#ECFDF5',
+    justifyContent: 'space-between',
+    borderTopWidth: 1,
+    borderTopColor: '#F8FAFC',
+    paddingTop: 8,
+  },
+  categoryCount: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#94A3B8',
+  },
+
+  // 4. TRANSPORTE
+  transitCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    padding: 18,
     borderWidth: 1,
-    borderColor: '#A7F3D0',
+    borderColor: '#BFDBFE',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#2563EB',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.06,
+        shadowRadius: 10,
+      },
+      android: {
+        elevation: 2,
+      },
+      web: {
+        boxShadow: '0 4px 16px rgba(37, 99, 235, 0.06)',
+      },
+    }),
+  },
+  transitTopRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  transitBadge: {
+    backgroundColor: '#EFF6FF',
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 8,
-    gap: 5,
   },
-  priceBadgeText: {
+  transitBadgeText: {
     fontSize: 12,
     fontWeight: '800',
-    color: '#065F46',
+    color: '#2563EB',
   },
-  durationContainer: {
+  transitArrowPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F8FAFC',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    paddingHorizontal: 7,
-    paddingVertical: 3,
-    borderRadius: 6,
     gap: 4,
   },
-  durationText: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: '#64748B',
+  transitArrowText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#2563EB',
   },
-  emptyContainer: {
+  transitTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#0F172A',
+    marginBottom: 6,
+  },
+  transitDescription: {
+    fontSize: 13,
+    color: '#475569',
+    lineHeight: 18,
+    marginBottom: 14,
+  },
+  transitRouteTags: {
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    paddingVertical: 36,
-    paddingHorizontal: 20,
-    marginTop: 4,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    borderStyle: 'dashed',
+    gap: 6,
   },
-  emptyTitle: {
-    fontSize: 16,
+  routeTag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F1F5F9',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    gap: 4,
+  },
+  routeTagText: {
+    fontSize: 11,
     fontWeight: '700',
     color: '#334155',
-    marginTop: 12,
   },
-  emptySubtitle: {
+
+  // 5. FOOTER
+  footerNote: {
+    marginTop: 28,
+    alignItems: 'center',
+    gap: 4,
+  },
+  footerNoteBrand: {
     fontSize: 13,
+    fontWeight: '800',
+    color: '#94A3B8',
+    letterSpacing: 0.5,
+  },
+  footerNoteText: {
+    fontSize: 12,
     color: '#94A3B8',
     textAlign: 'center',
-    marginTop: 4,
-    maxWidth: 280,
-  },
-  /* Modal Styles */
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
-  modalContainer: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 24,
-    width: '100%',
-    maxWidth: 420,
-    maxHeight: '75%',
-    padding: 20,
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 10 },
-        shadowOpacity: 0.25,
-        shadowRadius: 25,
-      },
-      android: {
-        elevation: 10,
-      },
-      default: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 10 },
-        shadowOpacity: 0.25,
-        shadowRadius: 25,
-      },
-    }),
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingBottom: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
-    marginBottom: 8,
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#0F172A',
-  },
-  modalSubtitle: {
-    fontSize: 13,
-    color: '#64748B',
-    marginTop: 2,
-  },
-  modalCloseButton: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    backgroundColor: '#F1F5F9',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  cityItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 14,
-    paddingHorizontal: 12,
-    borderRadius: 12,
-    marginVertical: 2,
-  },
-  cityItemSelected: {
-    backgroundColor: '#EFF6FF',
-  },
-  cityItemLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  cityDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#CBD5E1',
-  },
-  cityDotSelected: {
-    backgroundColor: '#2563EB',
-  },
-  cityItemText: {
-    fontSize: 16,
-    color: '#334155',
-    fontWeight: '500',
-  },
-  cityItemTextSelected: {
-    color: '#1D4ED8',
-    fontWeight: '700',
   },
 });

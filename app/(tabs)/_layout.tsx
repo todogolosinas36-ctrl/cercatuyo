@@ -64,6 +64,15 @@ export default function TabLayout() {
       <Tabs.Screen
         name="index"
         options={{
+          tabBarLabel: 'Inicio',
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons name={focused ? 'home' : 'home-outline'} size={24} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="colectivos"
+        options={{
           tabBarLabel: 'Colectivos',
           tabBarIcon: ({ color }) => <TabBarIcon name="bus" color={color} />,
         }}
