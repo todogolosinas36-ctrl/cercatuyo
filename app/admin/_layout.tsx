@@ -13,62 +13,73 @@ import {
 } from 'react-native';
 import { Stack, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-
-const STORAGE_KEY = '@cercatuyo_admin_session';
+import { onAuthStateChanged, signInWithEmailAndPassword, signOut } from 'firebase/auth';
+import { auth } from '../../config/firebase';
 
 export default function AdminLayout() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [loadingAuth, setLoadingAuth] = useState(true);
 
   // Campos de formulario
-  const [usuario, setUsuario] = useState('');
+  const [correo, setCorreo] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
 
-  // Verificamos si existe sesión previa guardada en AsyncStorage
+  // Escuchamos el estado de la sesión en tiempo real con Firebase Auth
   useEffect(() => {
-    AsyncStorage.getItem(STORAGE_KEY)
-      .then((val) => {
-        if (val === 'true') {
-          setIsAuthenticated(true);
-        }
-      })
-      .catch(() => {})
-      .finally(() => {
-        setLoadingAuth(false);
-      });
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setIsAuthenticated(!!user);
+      setLoadingAuth(false);
+    });
+
+    return () => unsubscribe();
   }, []);
 
   const handleLogin = async () => {
-    // Validación estricta: usuario exactamente "admin" y contraseña exactamente "admin"
-    if (usuario.trim() === 'admin' && password === 'admin') {
-      setIsAuthenticated(true);
-      setError('');
-      setUsuario('');
+    if (!correo.trim() || !password) {
+      setError('Por favor ingresa tu correo y contraseña.');
+      return;
+    }
+
+    setSubmitting(true);
+    setError('');
+
+    try {
+      await signInWithEmailAndPassword(auth, correo.trim(), password);
+      setCorreo('');
       setPassword('');
-      try {
-        await AsyncStorage.setItem(STORAGE_KEY, 'true');
-      } catch (e) {
-        console.warn('Error al guardar sesión:', e);
+    } catch (err: any) {
+      console.error('Error al iniciar sesión:', err);
+      if (
+        err.code === 'auth/invalid-credential' ||
+        err.code === 'auth/user-not-found' ||
+        err.code === 'auth/wrong-password'
+      ) {
+        setError('Credenciales inválidas. Verifica correo y contraseña.');
+      } else if (err.code === 'auth/invalid-email') {
+        setError('El formato del correo electrónico es inválido.');
+      } else if (err.code === 'auth/too-many-requests') {
+        setError('Demasiados intentos fallidos. Inténtalo más tarde.');
+      } else {
+        setError(err.message || 'Error al iniciar sesión.');
       }
-    } else {
-      setError('Credenciales inválidas. Verifica usuario y contraseña.');
+    } finally {
+      setSubmitting(false);
     }
   };
 
   const handleLogout = async () => {
-    setIsAuthenticated(false);
     try {
-      await AsyncStorage.removeItem(STORAGE_KEY);
+      await signOut(auth);
     } catch (e) {
-      console.warn('Error al borrar sesión:', e);
+      console.warn('Error al cerrar sesión:', e);
     }
     router.replace('/');
   };
 
-  // Pantalla de carga inicial mientras se consulta AsyncStorage
+  // Pantalla de carga inicial mientras se verifica la sesión
   if (loadingAuth) {
     return (
       <View style={styles.loadingContainer}>
@@ -108,20 +119,21 @@ export default function AdminLayout() {
                 </View>
               ) : null}
 
-              {/* CAMPO: USUARIO */}
+              {/* CAMPO: CORREO */}
               <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>USUARIO</Text>
+                <Text style={styles.inputLabel}>CORREO ELECTRÓNICO</Text>
                 <View style={[styles.inputWrapper, error ? styles.inputWrapperError : null]}>
-                  <Ionicons name="person-outline" size={20} color="#64748B" style={styles.inputIcon} />
+                  <Ionicons name="mail-outline" size={20} color="#64748B" style={styles.inputIcon} />
                   <TextInput
                     style={styles.textInput}
-                    placeholder="admin"
+                    placeholder="admin@cercatuyo.com"
                     placeholderTextColor="#94A3B8"
+                    keyboardType="email-address"
                     autoCapitalize="none"
                     autoCorrect={false}
-                    value={usuario}
+                    value={correo}
                     onChangeText={(val) => {
-                      setUsuario(val);
+                      setCorreo(val);
                       if (error) setError('');
                     }}
                     returnKeyType="next"
@@ -165,12 +177,19 @@ export default function AdminLayout() {
 
               {/* BOTÓN DE ACCESO ANCHO Y DESTACADO */}
               <TouchableOpacity
-                style={styles.btnIngresar}
+                style={[styles.btnIngresar, submitting && { opacity: 0.8 }]}
                 onPress={handleLogin}
+                disabled={submitting}
                 activeOpacity={0.85}
               >
-                <Text style={styles.btnIngresarText}>Iniciar Sesión</Text>
-                <Ionicons name="arrow-forward" size={18} color="#FFFFFF" />
+                {submitting ? (
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                ) : (
+                  <>
+                    <Text style={styles.btnIngresarText}>Iniciar Sesión</Text>
+                    <Ionicons name="arrow-forward" size={18} color="#FFFFFF" />
+                  </>
+                )}
               </TouchableOpacity>
 
               {/* BOTÓN SECUNDARIO: VOLVER A LA APP PÚBLICA */}

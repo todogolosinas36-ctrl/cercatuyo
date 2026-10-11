@@ -20,7 +20,7 @@ import { db } from '../../config/firebase';
 const CIUDADES_PERMITIDAS = ['Aguilares', 'Concepción', 'Monteros', 'San Miguel de Tucumán'];
 
 export default function AdminOficiosScreen() {
-  const { trabajadores, categorias, agregarTrabajador, eliminarTrabajador, limpiarMemoria, restaurarPrueba } = useOficios();
+  const { trabajadores, categorias, eliminarTrabajador, limpiarMemoria, restaurarPrueba } = useOficios();
 
   const [nombre, setNombre] = useState('');
   const [telefono, setTelefono] = useState('');
@@ -55,13 +55,8 @@ export default function AdminOficiosScreen() {
       };
 
       // Guardar en la colección 'oficios' de Firebase Firestore
-      const docRef = await addDoc(collection(db, 'oficios'), nuevoTrabajadorData);
-
-      // Actualizar también el estado local
-      agregarTrabajador({
-        id: docRef.id,
-        ...nuevoTrabajadorData,
-      });
+      // Al usar onSnapshot en el contexto, la lista se actualizará sola sin necesidad de modificar el estado local
+      await addDoc(collection(db, 'oficios'), nuevoTrabajadorData);
 
       Alert.alert('Éxito', 'Trabajador agregado correctamente en la base de datos');
       setNombre('');
