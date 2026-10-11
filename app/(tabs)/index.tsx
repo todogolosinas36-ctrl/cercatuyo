@@ -12,8 +12,6 @@ import { Ionicons, FontAwesome5 } from '@expo/vector-icons';
 import { useOficios } from '@/context/OficiosContext';
 import ClimaWidget from '@/components/ClimaWidget';
 import CarruselFarmacias from '@/components/CarruselFarmacias';
-import { db } from '../../config/firebase';
-import { doc, setDoc, increment } from 'firebase/firestore';
 
 // Formato de fecha en español
 function obtenerFechaHoy(): string {
@@ -72,25 +70,6 @@ export default function HomeDashboardScreen() {
 
   // Fecha de hoy
   const fechaHoy = useMemo(() => obtenerFechaHoy(), []);
-
-  // Registrar visita global en Firestore (+1 a visitasTotales)
-  useEffect(() => {
-    if (!isMounted) return;
-
-    const registrarVisita = async () => {
-      try {
-        await setDoc(
-          doc(db, 'sistema', 'estadisticas'),
-          { visitasTotales: increment(1) },
-          { merge: true }
-        );
-      } catch (error: any) {
-        console.warn('Firebase en modo lectura/bloqueado temporalmente:', error?.message || error);
-      }
-    };
-
-    registrarVisita();
-  }, [isMounted]);
 
   return (
     <ScrollView

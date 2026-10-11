@@ -9,43 +9,21 @@ import {
 } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { doc, getDoc } from 'firebase/firestore';
 import { useOficios } from '@/context/OficiosContext';
-import { db } from '../../config/firebase';
 
 export default function AdminDashboardScreen() {
   const { trabajadores, categorias } = useOficios();
   const [isMounted, setIsMounted] = useState(false);
-  const [visitas, setVisitas] = useState<number | string>('Cargando...');
+
+  // NOTA ARQUITECTURA (B-12):
+  // Se eliminó la lectura y escritura del contador de visitas en Firestore ('sistema/estadisticas')
+  // para evitar costos y cuotas innecesarias de operaciones de base de datos en Firebase.
+  // Se recomienda integrar un script de analítica web ligero y externo (como Plausible Analytics,
+  // Umami o Google Analytics 4) para medir visitantes únicos, páginas vistas y fuentes en tiempo real.
 
   useEffect(() => {
     setIsMounted(true);
   }, []);
-
-  useEffect(() => {
-    if (!isMounted) return;
-
-    const consultarEstadisticas = async () => {
-      try {
-        const docSnap = await getDoc(doc(db, 'sistema', 'estadisticas'));
-        if (docSnap.exists()) {
-          const data = docSnap.data();
-          setVisitas(data.visitasTotales ?? 0);
-        } else {
-          setVisitas(0);
-        }
-      } catch (error: any) {
-        console.warn('Firebase en modo lectura/bloqueado temporalmente:', error?.message || error);
-        setVisitas('Sin conexión a BD');
-      }
-    };
-
-    consultarEstadisticas();
-  }, [isMounted]);
-
-  if (!isMounted) {
-    return <View style={styles.container} />;
-  }
 
   const handleFarmaciasPress = () => {
     Alert.alert(
@@ -88,46 +66,23 @@ export default function AdminDashboardScreen() {
         <Text style={styles.sectionTitle}>Métricas de la Plataforma</Text>
       </View>
       <Text style={styles.sectionSubtitle}>
-        Datos de tráfico estimados (preparado para integración con Firebase Analytics)
+        Monitoreo de contenidos y actividad de CercaTuyo
       </Text>
 
-      <View style={styles.metricsGrid}>
-        {/* TARJETA: VISITAS REALES */}
-        <View style={styles.metricCard}>
-          <View style={styles.metricCardHeader}>
-            <View style={[styles.metricIconBox, { backgroundColor: '#EFF6FF' }]}>
-              <Ionicons name="eye" size={20} color="#2563EB" />
-            </View>
-            <View style={styles.trendBadgePositive}>
-              <Ionicons name="cloud-done-outline" size={12} color="#059669" />
-              <Text style={styles.trendBadgeText}>En vivo</Text>
-            </View>
-          </View>
-          <Text style={styles.metricValue}>
-            {typeof visitas === 'number' ? visitas.toLocaleString('es-AR') : visitas}
-          </Text>
-          <Text style={styles.metricLabel}>Visitas totales</Text>
-          <Text style={styles.metricDetail}>En tiempo real (Firestore)</Text>
+      {/* TARJETA RECOMENDACIÓN ANALYTICS (B-12) */}
+      <View style={styles.analyticsNoticeCard}>
+        <View style={styles.analyticsIconBox}>
+          <Ionicons name="analytics" size={24} color="#2563EB" />
         </View>
-
-        {/* TARJETA: USUARIOS ACTIVOS */}
-        <View style={styles.metricCard}>
-          <View style={styles.metricCardHeader}>
-            <View style={[styles.metricIconBox, { backgroundColor: '#ECFDF5' }]}>
-              <Ionicons name="people" size={20} color="#059669" />
-            </View>
-            <View style={styles.liveIndicator}>
-              <View style={styles.liveDot} />
-              <Text style={styles.liveText}>En vivo</Text>
-            </View>
-          </View>
-          <Text style={styles.metricValue}>342</Text>
-          <Text style={styles.metricLabel}>Usuarios activos</Text>
-          <Text style={styles.metricDetail}>Últimos 30 minutos</Text>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.analyticsTitle}>Analítica Web Externa Recomendada</Text>
+          <Text style={styles.analyticsText}>
+            Para medir visitas reales sin consumir operaciones de lectura y escritura en Firebase, se sugiere integrar un script de analítica (como Plausible, Umami o Google Analytics) directamente en app/+html.tsx.
+          </Text>
         </View>
       </View>
 
-      {/* MÉTRICA ADICIONAL: OFICIOS Y CATEGORÍAS */}
+      {/* MÉTRICA: OFICIOS Y CATEGORÍAS */}
       <View style={styles.summaryBar}>
         <View style={styles.summaryItem}>
           <Ionicons name="hammer-outline" size={16} color="#64748B" />
@@ -322,87 +277,35 @@ const styles = StyleSheet.create({
     color: '#64748B',
     marginBottom: 12,
   },
-  metricsGrid: {
+  analyticsNoticeCard: {
     flexDirection: 'row',
-    gap: 12,
-    marginBottom: 12,
-  },
-  metricCard: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
+    alignItems: 'flex-start',
+    backgroundColor: '#EFF6FF',
+    borderWidth: 1,
+    borderColor: '#BFDBFE',
     borderRadius: 16,
     padding: 16,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
+    gap: 12,
+    marginBottom: 14,
   },
-  metricCardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 10,
-  },
-  metricIconBox: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
+  analyticsIconBox: {
+    width: 42,
+    height: 42,
+    borderRadius: 12,
+    backgroundColor: '#DBEAFE',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  trendBadgePositive: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 2,
-    backgroundColor: '#ECFDF5',
-    paddingVertical: 3,
-    paddingHorizontal: 6,
-    borderRadius: 12,
-  },
-  trendBadgeText: {
-    fontSize: 11,
+  analyticsTitle: {
+    fontSize: 14,
     fontWeight: '700',
-    color: '#059669',
+    color: '#1E3A8A',
+    marginBottom: 4,
   },
-  liveIndicator: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    backgroundColor: '#F1F5F9',
-    paddingVertical: 3,
-    paddingHorizontal: 6,
-    borderRadius: 12,
-  },
-  liveDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: '#10B981',
-  },
-  liveText: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: '#0F172A',
-  },
-  metricValue: {
-    fontSize: 26,
-    fontWeight: '800',
-    color: '#0F172A',
-    letterSpacing: -0.5,
-    marginBottom: 2,
-  },
-  metricLabel: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#475569',
-  },
-  metricDetail: {
-    fontSize: 11,
-    color: '#94A3B8',
-    marginTop: 2,
+  analyticsText: {
+    fontSize: 12,
+    color: '#3B82F6',
+    lineHeight: 18,
   },
   summaryBar: {
     flexDirection: 'row',

@@ -61,11 +61,12 @@ export const OficiosProvider = ({ children }: { children: React.ReactNode }) => 
       await deleteDoc(doc(db, 'oficios', id));
     } catch (error) {
       console.error('Error al eliminar oficio de Firestore:', error);
+      throw error;
     }
   };
 
-  const agregarCategoria = (c: CategoriaOficio) => setCategorias([...categorias, c]);
-  const eliminarCategoria = (id: string) => setCategorias(categorias.filter((c) => c.id !== id));
+  const agregarCategoria = (c: CategoriaOficio) => setCategorias((prev) => [...prev, c]);
+  const eliminarCategoria = (id: string) => setCategorias((prev) => prev.filter((c) => c.id !== id));
 
   const limpiarMemoria = () => {};
   const restaurarPrueba = () => {};
