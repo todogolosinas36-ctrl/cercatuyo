@@ -1,6 +1,16 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet, Alert, Modal, FlatList } from 'react-native';
-import { useOficios } from '../../context/OficiosContext';
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  ScrollView,
+  StyleSheet,
+  Alert,
+  Modal,
+  FlatList,
+} from 'react-native';
+import { useOficios } from '@/context/OficiosContext';
 import { Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -12,12 +22,12 @@ export default function AdminOficiosScreen() {
   const [nombre, setNombre] = useState('');
   const [telefono, setTelefono] = useState('');
   const [descripcion, setDescripcion] = useState('');
-  const [fotoUrl, setFotoUrl] = useState(''); 
+  const [fotoUrl, setFotoUrl] = useState('');
 
   // Estados para los desplegables
   const [ubicacion, setUbicacion] = useState(CIUDADES_PERMITIDAS[0]);
   const [categoriaId, setCategoriaId] = useState(categorias[0]?.id || '');
-  
+
   // Estados para controlar los Modales
   const [modalCiudadVisible, setModalCiudadVisible] = useState(false);
   const [modalCategoriaVisible, setModalCategoriaVisible] = useState(false);
@@ -34,26 +44,29 @@ export default function AdminOficiosScreen() {
       ubicacion,
       descripcion,
       categoriaId,
-      fotos: fotoUrl ? [fotoUrl] : []
+      fotos: fotoUrl ? [fotoUrl] : [],
     };
 
     agregarTrabajador(nuevoTrabajador);
     Alert.alert('Éxito', 'Trabajador agregado correctamente');
-    setNombre(''); setTelefono(''); setDescripcion(''); setFotoUrl('');
+    setNombre('');
+    setTelefono('');
+    setDescripcion('');
+    setFotoUrl('');
   };
 
   const getNombreCategoria = (id: string) => {
-    const cat = categorias.find(c => c.id === id);
+    const cat = categorias.find((c) => c.id === id);
     return cat ? cat.nombre : 'Seleccionar categoría...';
   };
 
   return (
-    <ScrollView style={styles.container}>
+    <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 40 }}>
       <Stack.Screen options={{ title: 'Gestión de Oficios' }} />
 
       <View style={styles.form}>
         <Text style={styles.title}>Cargar Nuevo Trabajador</Text>
-        
+
         {/* DESPLEGABLE DE CATEGORÍA */}
         <Text style={styles.label}>Oficio / Categoría</Text>
         <TouchableOpacity style={styles.pickerButton} onPress={() => setModalCategoriaVisible(true)}>
@@ -62,11 +75,24 @@ export default function AdminOficiosScreen() {
         </TouchableOpacity>
 
         <Text style={styles.label}>Nombre completo</Text>
-        <TextInput style={styles.input} placeholder="Ej: Juan Pérez" value={nombre} onChangeText={setNombre} />
-        
+        <TextInput
+          style={styles.input}
+          placeholder="Ej: Juan Pérez"
+          placeholderTextColor="#9ca3af"
+          value={nombre}
+          onChangeText={setNombre}
+        />
+
         <Text style={styles.label}>Teléfono (WhatsApp)</Text>
-        <TextInput style={styles.input} placeholder="Ej: 549381..." value={telefono} onChangeText={setTelefono} keyboardType="phone-pad" />
-        
+        <TextInput
+          style={styles.input}
+          placeholder="Ej: 549381..."
+          placeholderTextColor="#9ca3af"
+          value={telefono}
+          onChangeText={setTelefono}
+          keyboardType="phone-pad"
+        />
+
         {/* DESPLEGABLE DE CIUDAD */}
         <Text style={styles.label}>Ciudad</Text>
         <TouchableOpacity style={styles.pickerButton} onPress={() => setModalCiudadVisible(true)}>
@@ -75,43 +101,63 @@ export default function AdminOficiosScreen() {
         </TouchableOpacity>
 
         <Text style={styles.label}>Descripción de los servicios</Text>
-        <TextInput style={styles.input} placeholder="¿Qué trabajos realiza?" value={descripcion} onChangeText={setDescripcion} multiline numberOfLines={3} />
-        
-        <Text style={styles.label}>URL de la foto (Opcional)</Text>
-        <TextInput style={styles.input} placeholder="https://..." value={fotoUrl} onChangeText={setFotoUrl} />
+        <TextInput
+          style={[styles.input, { minHeight: 70, textAlignVertical: 'top' }]}
+          placeholder="¿Qué trabajos realiza?"
+          placeholderTextColor="#9ca3af"
+          value={descripcion}
+          onChangeText={setDescripcion}
+          multiline
+          numberOfLines={3}
+        />
 
-        <TouchableOpacity style={styles.btnGuardar} onPress={handleGuardar}>
+        <Text style={styles.label}>URL de la foto (Opcional)</Text>
+        <TextInput
+          style={styles.input}
+          placeholder="https://..."
+          placeholderTextColor="#9ca3af"
+          value={fotoUrl}
+          onChangeText={setFotoUrl}
+        />
+
+        <TouchableOpacity style={styles.btnGuardar} onPress={handleGuardar} activeOpacity={0.85}>
           <Text style={styles.btnText}>Guardar Trabajador</Text>
         </TouchableOpacity>
       </View>
 
-      <Text style={styles.titleList}>Trabajadores Registrados</Text>
+      <Text style={styles.titleList}>Trabajadores Registrados ({trabajadores.length})</Text>
       {trabajadores.map((item) => (
         <View key={item.id} style={styles.card}>
           <View style={{ flex: 1 }}>
             <Text style={styles.cardTitle}>{item.nombre}</Text>
-            <Text style={styles.cardSubtitle}>{item.ubicacion} - {getNombreCategoria(item.categoriaId)}</Text>
+            <Text style={styles.cardSubtitle}>
+              {item.ubicacion} - {getNombreCategoria(item.categoriaId)}
+            </Text>
           </View>
-          <TouchableOpacity onPress={() => eliminarTrabajador(item.id)} style={styles.btnEliminar}>
-            <Ionicons name="trash-outline" size={24} color="white" />
+          <TouchableOpacity
+            onPress={() => eliminarTrabajador(item.id)}
+            style={styles.btnEliminar}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Ionicons name="trash-outline" size={20} color="white" />
           </TouchableOpacity>
         </View>
       ))}
 
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 20, marginBottom: 40 }}>
-        <TouchableOpacity 
-          style={{ backgroundColor: '#10b981', padding: 12, borderRadius: 8, flex: 0.48, alignItems: 'center' }} 
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 20 }}>
+        <TouchableOpacity
+          style={{ backgroundColor: '#10b981', padding: 12, borderRadius: 8, flex: 0.48, alignItems: 'center' }}
           onPress={restaurarPrueba}
         >
           <Text style={{ color: 'white', fontWeight: 'bold' }}>Restaurar Prueba</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity 
-          style={{ backgroundColor: '#ef4444', padding: 12, borderRadius: 8, flex: 0.48, alignItems: 'center' }} 
+        <TouchableOpacity
+          style={{ backgroundColor: '#ef4444', padding: 12, borderRadius: 8, flex: 0.48, alignItems: 'center' }}
           onPress={() => {
             Alert.alert('¡Atención!', '¿Borrar todos los trabajadores guardados?', [
               { text: 'Cancelar', style: 'cancel' },
-              { text: 'Borrar todo', style: 'destructive', onPress: limpiarMemoria }
+              { text: 'Borrar todo', style: 'destructive', onPress: limpiarMemoria },
             ]);
           }}
         >
@@ -125,10 +171,13 @@ export default function AdminOficiosScreen() {
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>Seleccionar Ciudad</Text>
             {CIUDADES_PERMITIDAS.map((ciudad) => (
-              <TouchableOpacity 
-                key={ciudad} 
+              <TouchableOpacity
+                key={ciudad}
                 style={styles.modalItem}
-                onPress={() => { setUbicacion(ciudad); setModalCiudadVisible(false); }}
+                onPress={() => {
+                  setUbicacion(ciudad);
+                  setModalCiudadVisible(false);
+                }}
               >
                 <Text style={styles.modalItemText}>{ciudad}</Text>
               </TouchableOpacity>
@@ -146,9 +195,12 @@ export default function AdminOficiosScreen() {
               data={categorias}
               keyExtractor={(item) => item.id}
               renderItem={({ item }) => (
-                <TouchableOpacity 
+                <TouchableOpacity
                   style={styles.modalItem}
-                  onPress={() => { setCategoriaId(item.id); setModalCategoriaVisible(false); }}
+                  onPress={() => {
+                    setCategoriaId(item.id);
+                    setModalCategoriaVisible(false);
+                  }}
                 >
                   <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                     <Ionicons name={item.icono as any} size={20} color="#1E3A8A" style={{ marginRight: 10 }} />
@@ -160,7 +212,6 @@ export default function AdminOficiosScreen() {
           </View>
         </TouchableOpacity>
       </Modal>
-
     </ScrollView>
   );
 }
@@ -171,23 +222,50 @@ const styles = StyleSheet.create({
   title: { fontSize: 20, fontWeight: 'bold', marginBottom: 16, color: '#1f2937' },
   titleList: { fontSize: 20, fontWeight: 'bold', marginBottom: 12, color: '#1f2937', marginTop: 10 },
   label: { fontSize: 12, fontWeight: '600', color: '#4b5563', marginBottom: 6 },
-  input: { backgroundColor: '#f9fafb', borderWidth: 1, borderColor: '#d1d5db', borderRadius: 8, padding: 12, marginBottom: 16 },
-  
-  // Estilos para el botón desplegable falso
-  pickerButton: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#f9fafb', borderWidth: 1, borderColor: '#d1d5db', borderRadius: 8, padding: 12, marginBottom: 16 },
+  input: {
+    backgroundColor: '#f9fafb',
+    borderWidth: 1,
+    borderColor: '#d1d5db',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 16,
+    color: '#1f2937',
+  },
+  pickerButton: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#f9fafb',
+    borderWidth: 1,
+    borderColor: '#d1d5db',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 16,
+  },
   pickerText: { fontSize: 16, color: '#1f2937' },
-  
   btnGuardar: { backgroundColor: '#1E3A8A', padding: 14, borderRadius: 8, alignItems: 'center', marginTop: 8 },
   btnText: { color: 'white', fontWeight: 'bold', fontSize: 16 },
-  card: { flexDirection: 'row', backgroundColor: 'white', padding: 16, borderRadius: 12, marginBottom: 10, alignItems: 'center', elevation: 1 },
+  card: {
+    flexDirection: 'row',
+    backgroundColor: 'white',
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 10,
+    alignItems: 'center',
+    elevation: 1,
+  },
   cardTitle: { fontSize: 16, fontWeight: 'bold', color: '#1f2937' },
   cardSubtitle: { fontSize: 14, color: '#6b7280', marginTop: 4 },
   btnEliminar: { backgroundColor: '#ef4444', padding: 10, borderRadius: 8 },
-  
-  // Estilos de los Modales
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
-  modalContent: { backgroundColor: 'white', borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 20, maxHeight: '60%' },
+  modalContent: {
+    backgroundColor: 'white',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: 20,
+    maxHeight: '60%',
+  },
   modalTitle: { fontSize: 18, fontWeight: 'bold', color: '#1f2937', marginBottom: 15, textAlign: 'center' },
   modalItem: { paddingVertical: 15, borderBottomWidth: 1, borderBottomColor: '#f3f4f6' },
-  modalItemText: { fontSize: 16, color: '#374151' }
+  modalItemText: { fontSize: 16, color: '#374151' },
 });

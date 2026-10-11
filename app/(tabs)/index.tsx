@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FontAwesome } from '@expo/vector-icons';
+import { router } from 'expo-router';
 import { TODOS_LOS_VIAJES, PRECIOS_TESA, Viaje } from '@/data/horarios';
 
 const CIUDADES = [
@@ -142,11 +143,17 @@ export default function ColectivosScreen() {
 
   const renderHeader = () => (
     <View>
-      {/* Título de la sección */}
-      <View style={styles.topHeader}>
-        <Text style={styles.screenTitle}>Buscador de Horarios</Text>
-        <Text style={styles.screenSubtitle}>Encuentra tu próximo viaje</Text>
-      </View>
+      {/* Título de la sección (Puerta secreta de administración mediante pulsación prolongada) */}
+      <TouchableOpacity
+        activeOpacity={1}
+        delayLongPress={2000}
+        onLongPress={() => router.push('/admin' as any)}
+      >
+        <View style={styles.topHeader}>
+          <Text style={styles.screenTitle}>Buscador de Horarios</Text>
+          <Text style={styles.screenSubtitle}>Encuentra tu próximo viaje</Text>
+        </View>
+      </TouchableOpacity>
 
       {/* Tarjeta Flotante de Búsqueda */}
       <View style={styles.searchCard}>

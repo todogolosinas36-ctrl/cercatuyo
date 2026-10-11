@@ -1,11 +1,13 @@
-import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import React, { useEffect } from 'react';
+import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { FontAwesome, Ionicons } from '@expo/vector-icons';
-import { Tabs } from 'expo-router';
+import { Tabs, router } from 'expo-router';
+import { doc, setDoc, increment } from 'firebase/firestore';
 
 import Colors from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
 import { useClientOnlyValue } from '@/components/useClientOnlyValue';
+import { db } from '@/config/firebase';
 
 function TabBarIcon(props: {
   name: React.ComponentProps<typeof FontAwesome>['name'];
@@ -16,17 +18,36 @@ function TabBarIcon(props: {
 
 function BrandHeaderTitle() {
   return (
-    <View style={styles.brandContainer}>
+    <Pressable
+      style={styles.brandContainer}
+      delayLongPress={2000}
+      onLongPress={() => router.push('/admin' as any)}
+      accessibilityRole="header"
+    >
       <View style={styles.brandIconWrapper}>
         <FontAwesome name="map-marker" size={20} color="#2563EB" />
       </View>
       <Text style={styles.brandTitle}>Cerca<Text style={styles.brandTitleHighlight}>Tuyo</Text></Text>
-    </View>
+    </Pressable>
   );
 }
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
+
+  // Registrar visita global en Firestore al iniciar la app
+  useEffect(() => {
+    const registrarVisita = async () => {
+      try {
+        const statsRef = doc(db, 'sistema', 'estadisticas');
+        await setDoc(statsRef, { visitas_totales: increment(1) }, { merge: true });
+      } catch (error) {
+        console.warn('No se pudo registrar la visita en Firestore:', error);
+      }
+    };
+
+    registrarVisita();
+  }, []);
 
   return (
     <Tabs
@@ -61,13 +82,6 @@ export default function TabLayout() {
         options={{
           title: 'Oficios',
           tabBarIcon: ({ color }) => <Ionicons name="hammer-outline" size={24} color={color} />,
-        }}
-      />
-      <Tabs.Screen
-        name="configuracion"
-        options={{
-          tabBarLabel: 'Ajustes',
-          tabBarIcon: ({ color }) => <TabBarIcon name="gear" color={color} />,
         }}
       />
     </Tabs>
