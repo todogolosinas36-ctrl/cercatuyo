@@ -53,6 +53,7 @@ function RootLayoutNav() {
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
           <Stack.Screen name="admin" options={{ headerShown: false }} />
           <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
+          <Stack.Screen name="emergencias" options={{ title: 'Números de Emergencia' }} />
         </Stack>
       </OficiosProvider>
     </ThemeProvider>

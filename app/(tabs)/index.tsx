@@ -15,6 +15,7 @@ import { Ionicons, MaterialCommunityIcons, FontAwesome5 } from '@expo/vector-ico
 import farmaciasFallback from '@/data/farmaciasTurno.json';
 import { Farmacia } from '@/data/farmacias';
 import { useOficios } from '@/context/OficiosContext';
+import ClimaWidget from '@/components/ClimaWidget';
 
 // URL cruda de GitHub para sincronización en tiempo real
 const URL_FARMACIAS_RAW =
@@ -155,6 +156,27 @@ export default function HomeDashboardScreen() {
         <Text style={styles.greetingSubtitle}>
           Tu punto de encuentro con farmacias de guardia, transporte y trabajadores de confianza.
         </Text>
+
+        {/* WIDGET DEL CLIMA LOCAL */}
+        <ClimaWidget />
+
+        {/* BOTÓN DESTACADO DE EMERGENCIAS */}
+        <TouchableOpacity
+          style={styles.emergencyButton}
+          onPress={() => router.push('/emergencias')}
+          activeOpacity={0.85}
+        >
+          <View style={styles.emergencyLeft}>
+            <View style={styles.emergencyIconWrapper}>
+              <Ionicons name="warning" size={18} color="#FFFFFF" />
+            </View>
+            <View style={styles.emergencyTexts}>
+              <Text style={styles.emergencyBtnTitle}>Emergencias - Llamado Rápido</Text>
+              <Text style={styles.emergencyBtnSub}>Hospital 107 • Policía 101 • Bomberos 100 • Def. Civil 103</Text>
+            </View>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color="#FFFFFF" />
+        </TouchableOpacity>
       </View>
 
       {/* 2. WIDGET DESTACADO: FARMACIA DE TURNO */}
@@ -409,6 +431,58 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#475569',
     lineHeight: 20,
+  },
+  emergencyButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#DC2626',
+    borderRadius: 16,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    marginTop: 14,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#DC2626',
+        shadowOffset: { width: 0, height: 3 },
+        shadowOpacity: 0.25,
+        shadowRadius: 6,
+      },
+      android: {
+        elevation: 3,
+      },
+      web: {
+        boxShadow: '0 4px 12px rgba(220, 38, 38, 0.25)',
+      },
+    }),
+  },
+  emergencyLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    flex: 1,
+  },
+  emergencyIconWrapper: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  emergencyTexts: {
+    flex: 1,
+  },
+  emergencyBtnTitle: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#FFFFFF',
+  },
+  emergencyBtnSub: {
+    fontSize: 11,
+    color: 'rgba(255, 255, 255, 0.9)',
+    fontWeight: '500',
+    marginTop: 1,
   },
 
   // SECCIONES GENERALES
