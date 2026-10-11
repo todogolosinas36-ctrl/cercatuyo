@@ -66,9 +66,15 @@ const DATOS_RESPALDO: FarmaciaItemCarrusel[] = [
 ];
 
 export default function CarruselFarmacias() {
+  const [isMounted, setIsMounted] = useState<boolean>(false);
   const [datosJson, setDatosJson] = useState<any>(farmaciasFallback);
 
   useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!isMounted) return;
     let montado = true;
     const fetchRemoto = async () => {
       try {
@@ -90,10 +96,11 @@ export default function CarruselFarmacias() {
     return () => {
       montado = false;
     };
-  }, []);
+  }, [isMounted]);
 
   // Filtrar exactamente 1 farmacia de turno por cada ciudad objetivo
   const listaFarmacias = useMemo<FarmaciaItemCarrusel[]>(() => {
+    if (!isMounted) return DATOS_RESPALDO;
     const listaCompleta = (datosJson?.farmacias || datosJson?.farmaciasDeTurno || []) as any[];
 
     if (!Array.isArray(listaCompleta) || listaCompleta.length === 0) {
@@ -192,6 +199,10 @@ export default function CarruselFarmacias() {
       </View>
     );
   };
+
+  if (!isMounted) {
+    return null;
+  }
 
   return (
     <View style={styles.container}>

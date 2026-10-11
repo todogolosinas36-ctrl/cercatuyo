@@ -23,11 +23,17 @@ function getWeatherIconAndDesc(code?: number): {
 }
 
 export default function ClimaWidget() {
+  const [isMounted, setIsMounted] = useState<boolean>(false);
   const [clima, setClima] = useState<WeatherData | null>(null);
   const [cargando, setCargando] = useState<boolean>(true);
   const [error, setError] = useState<boolean>(false);
 
   useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!isMounted) return;
     let activo = true;
 
     const obtenerClima = async () => {
@@ -55,7 +61,11 @@ export default function ClimaWidget() {
     return () => {
       activo = false;
     };
-  }, []);
+  }, [isMounted]);
+
+  if (!isMounted) {
+    return null;
+  }
 
   const infoClima = getWeatherIconAndDesc(clima?.weathercode);
 

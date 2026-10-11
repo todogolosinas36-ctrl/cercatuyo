@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   StyleSheet,
   Text,
@@ -64,12 +64,19 @@ const CATEGORIAS_DESTACADAS = [
 
 export default function HomeDashboardScreen() {
   const { trabajadores } = useOficios();
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   // Fecha de hoy
   const fechaHoy = useMemo(() => obtenerFechaHoy(), []);
 
   // Registrar visita global en Firestore (+1 a visitasTotales)
   useEffect(() => {
+    if (!isMounted) return;
+
     const registrarVisita = async () => {
       try {
         await setDoc(
@@ -77,13 +84,17 @@ export default function HomeDashboardScreen() {
           { visitasTotales: increment(1) },
           { merge: true }
         );
-      } catch (error) {
-        console.warn('Error al registrar visita en Firestore:', error);
+      } catch (error: any) {
+        console.warn('Firebase en modo lectura/bloqueado temporalmente:', error?.message || error);
       }
     };
 
     registrarVisita();
-  }, []);
+  }, [isMounted]);
+
+  if (!isMounted) {
+    return <View style={styles.container} />;
+  }
 
   return (
     <ScrollView

@@ -15,9 +15,16 @@ import { db } from '../../config/firebase';
 
 export default function AdminDashboardScreen() {
   const { trabajadores, categorias } = useOficios();
+  const [isMounted, setIsMounted] = useState(false);
   const [visitas, setVisitas] = useState<number | string>('Cargando...');
 
   useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!isMounted) return;
+
     const consultarEstadisticas = async () => {
       try {
         const docSnap = await getDoc(doc(db, 'sistema', 'estadisticas'));
@@ -27,14 +34,18 @@ export default function AdminDashboardScreen() {
         } else {
           setVisitas(0);
         }
-      } catch (error) {
-        console.warn('Error al obtener visitas de Firestore:', error);
-        setVisitas('No disponible');
+      } catch (error: any) {
+        console.warn('Firebase en modo lectura/bloqueado temporalmente:', error?.message || error);
+        setVisitas('Sin conexión a BD');
       }
     };
 
     consultarEstadisticas();
-  }, []);
+  }, [isMounted]);
+
+  if (!isMounted) {
+    return <View style={styles.container} />;
+  }
 
   const handleFarmaciasPress = () => {
     Alert.alert(

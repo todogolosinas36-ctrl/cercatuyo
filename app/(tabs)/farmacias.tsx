@@ -58,8 +58,13 @@ function formatearTelefonoVisual(telefono?: string): string {
 }
 
 export default function FarmaciasScreen() {
+  const [isMounted, setIsMounted] = useState<boolean>(false);
   const [localidadSeleccionada, setLocalidadSeleccionada] = useState<string>('Aguilares');
   const [busqueda, setBusqueda] = useState<string>('');
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   // Estado local para los datos de farmacias (iniciado con el fallback local estático)
   const [farmaciasData, setFarmaciasData] = useState<any>(farmaciasFallback);
@@ -287,7 +292,9 @@ export default function FarmaciasScreen() {
           </View>
           <View style={{ flex: 1 }}>
             <Text style={styles.dateLabel}>Fecha actual</Text>
-            <Text style={styles.dateText}>{formatearFechaAmigable(fechaHoy)}</Text>
+            <Text style={styles.dateText}>
+              {isMounted ? formatearFechaAmigable(fechaHoy) : 'Cargando fecha...'}
+            </Text>
           </View>
 
           {/* Botón táctil para recargar manualmente */}
