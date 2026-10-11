@@ -63,11 +63,45 @@ export default function AdminDashboardScreen() {
       {/* SECCIÓN DE MÉTRICAS / ANALYTICS */}
       <View style={styles.sectionHeader}>
         <Ionicons name="stats-chart" size={18} color="#1E3A8A" />
-        <Text style={styles.sectionTitle}>Métricas de la Plataforma</Text>
+        <Text style={styles.sectionTitle}>Métricas (Próximamente con Analytics)</Text>
       </View>
       <Text style={styles.sectionSubtitle}>
-        Monitoreo de contenidos y actividad de CercaTuyo
+        Datos de tráfico estimados (preparado para integración con Google Analytics o Plausible)
       </Text>
+
+      <View style={styles.metricsGrid}>
+        {/* TARJETA 1: VISITAS */}
+        <View style={styles.metricCard}>
+          <View style={styles.metricCardHeader}>
+            <View style={[styles.metricIconBox, { backgroundColor: '#EFF6FF' }]}>
+              <Ionicons name="eye" size={20} color="#2563EB" />
+            </View>
+            <View style={styles.pendingBadge}>
+              <Ionicons name="time-outline" size={12} color="#D97706" />
+              <Text style={styles.pendingBadgeText}>Próximamente</Text>
+            </View>
+          </View>
+          <Text style={styles.metricValue}>Integración pendiente</Text>
+          <Text style={styles.metricLabel}>Visitas totales</Text>
+          <Text style={styles.metricDetail}>Sin costo de base de datos</Text>
+        </View>
+
+        {/* TARJETA 2: USUARIOS ACTIVOS */}
+        <View style={styles.metricCard}>
+          <View style={styles.metricCardHeader}>
+            <View style={[styles.metricIconBox, { backgroundColor: '#ECFDF5' }]}>
+              <Ionicons name="people" size={20} color="#059669" />
+            </View>
+            <View style={styles.pendingBadge}>
+              <Ionicons name="time-outline" size={12} color="#D97706" />
+              <Text style={styles.pendingBadgeText}>Próximamente</Text>
+            </View>
+          </View>
+          <Text style={styles.metricValue}>Integración pendiente</Text>
+          <Text style={styles.metricLabel}>Usuarios activos</Text>
+          <Text style={styles.metricDetail}>Sin costo de base de datos</Text>
+        </View>
+      </View>
 
       {/* TARJETA RECOMENDACIÓN ANALYTICS (B-12) */}
       <View style={styles.analyticsNoticeCard}>
@@ -276,6 +310,67 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#64748B',
     marginBottom: 12,
+  },
+  metricsGrid: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 12,
+  },
+  metricCard: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  metricCardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  metricIconBox: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  pendingBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    backgroundColor: '#FEF3C7',
+    paddingVertical: 3,
+    paddingHorizontal: 7,
+    borderRadius: 10,
+  },
+  pendingBadgeText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#D97706',
+  },
+  metricValue: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#64748B',
+    marginBottom: 4,
+  },
+  metricLabel: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#0F172A',
+  },
+  metricDetail: {
+    fontSize: 11,
+    color: '#94A3B8',
+    marginTop: 2,
   },
   analyticsNoticeCard: {
     flexDirection: 'row',
