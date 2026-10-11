@@ -41,12 +41,29 @@ export default function AdminOficiosScreen() {
       return Alert.alert('Error', 'Completa todos los campos obligatorios');
     }
 
+    const telLimpio = telefono.replace(/\D/g, '');
+
+    // Validación rápida de teléfono para WhatsApp Argentina (549 + cód. área + número)
+    if (!telLimpio.startsWith('549')) {
+      return Alert.alert(
+        'Teléfono inválido',
+        'El número debe comenzar con "549" (código de país y prefijo móvil de Argentina para WhatsApp, Ej: 549381xxxxxxx).'
+      );
+    }
+
+    if (telLimpio.length < 12 || telLimpio.length > 13) {
+      return Alert.alert(
+        'Teléfono inválido',
+        `El número ingresado tiene ${telLimpio.length} dígitos. Un número móvil de Argentina debe tener 12 o 13 dígitos en total (sin 0 ni 15).`
+      );
+    }
+
     setGuardando(true);
 
     try {
       const nuevoTrabajadorData = {
         nombre: nombre.trim(),
-        telefono: telefono.trim(),
+        telefono: telLimpio,
         ubicacion,
         descripcion: descripcion.trim(),
         categoriaId,
@@ -102,7 +119,7 @@ export default function AdminOficiosScreen() {
         <Text style={styles.label}>Teléfono (WhatsApp)</Text>
         <TextInput
           style={styles.input}
-          placeholder="Ej: 549381..."
+          placeholder="Ej: 5493811234567"
           placeholderTextColor="#9ca3af"
           value={telefono}
           onChangeText={setTelefono}
