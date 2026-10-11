@@ -9,10 +9,13 @@ import {
   Alert,
   Modal,
   FlatList,
+  ActivityIndicator,
 } from 'react-native';
 import { useOficios } from '@/context/OficiosContext';
 import { Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { collection, addDoc } from 'firebase/firestore';
+import { db } from '../../config/firebase';
 
 const CIUDADES_PERMITIDAS = ['Aguilares', 'Concepción', 'Monteros', 'San Miguel de Tucumán'];
 
@@ -23,6 +26,7 @@ export default function AdminOficiosScreen() {
   const [telefono, setTelefono] = useState('');
   const [descripcion, setDescripcion] = useState('');
   const [fotoUrl, setFotoUrl] = useState('');
+  const [guardando, setGuardando] = useState(false);
 
   // Estados para los desplegables
   const [ubicacion, setUbicacion] = useState(CIUDADES_PERMITIDAS[0]);
@@ -32,27 +36,44 @@ export default function AdminOficiosScreen() {
   const [modalCiudadVisible, setModalCiudadVisible] = useState(false);
   const [modalCategoriaVisible, setModalCategoriaVisible] = useState(false);
 
-  const handleGuardar = () => {
-    if (!nombre || !telefono || !ubicacion || !descripcion || !categoriaId) {
+  const handleGuardar = async () => {
+    if (!nombre.trim() || !telefono.trim() || !ubicacion || !descripcion.trim() || !categoriaId) {
       return Alert.alert('Error', 'Completa todos los campos obligatorios');
     }
 
-    const nuevoTrabajador = {
-      id: Math.random().toString(36).substr(2, 9),
-      nombre,
-      telefono,
-      ubicacion,
-      descripcion,
-      categoriaId,
-      fotos: fotoUrl ? [fotoUrl] : [],
-    };
+    setGuardando(true);
 
-    agregarTrabajador(nuevoTrabajador);
-    Alert.alert('Éxito', 'Trabajador agregado correctamente');
-    setNombre('');
-    setTelefono('');
-    setDescripcion('');
-    setFotoUrl('');
+    try {
+      const nuevoTrabajadorData = {
+        nombre: nombre.trim(),
+        telefono: telefono.trim(),
+        ubicacion,
+        descripcion: descripcion.trim(),
+        categoriaId,
+        fotos: fotoUrl.trim() ? [fotoUrl.trim()] : [],
+        creadoEl: new Date().toISOString(),
+      };
+
+      // Guardar en la colección 'oficios' de Firebase Firestore
+      const docRef = await addDoc(collection(db, 'oficios'), nuevoTrabajadorData);
+
+      // Actualizar también el estado local
+      agregarTrabajador({
+        id: docRef.id,
+        ...nuevoTrabajadorData,
+      });
+
+      Alert.alert('Éxito', 'Trabajador agregado correctamente en la base de datos');
+      setNombre('');
+      setTelefono('');
+      setDescripcion('');
+      setFotoUrl('');
+    } catch (error) {
+      console.error('Error guardando oficio:', error);
+      Alert.alert('Error', 'No se pudo guardar en Firebase. Revisa las reglas de seguridad o la consola.');
+    } finally {
+      setGuardando(false);
+    }
   };
 
   const getNombreCategoria = (id: string) => {
@@ -120,8 +141,17 @@ export default function AdminOficiosScreen() {
           onChangeText={setFotoUrl}
         />
 
-        <TouchableOpacity style={styles.btnGuardar} onPress={handleGuardar} activeOpacity={0.85}>
-          <Text style={styles.btnText}>Guardar Trabajador</Text>
+        <TouchableOpacity
+          style={[styles.btnGuardar, guardando && { opacity: 0.7 }]}
+          onPress={handleGuardar}
+          disabled={guardando}
+          activeOpacity={0.85}
+        >
+          {guardando ? (
+            <ActivityIndicator size="small" color="#FFFFFF" />
+          ) : (
+            <Text style={styles.btnText}>Guardar Trabajador</Text>
+          )}
         </TouchableOpacity>
       </View>
 
