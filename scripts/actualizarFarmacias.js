@@ -124,12 +124,8 @@ function parsearCofatuc(html) {
     fechaTexto = `${dia.padStart(2, '0')}/${mes.padStart(2, '0')}/${anio}`;
     fechaISO = `${anio}-${mes.padStart(2, '0')}-${dia.padStart(2, '0')}`;
   } else {
-    const hoy = new Date();
-    const anio = hoy.getFullYear();
-    const mes = String(hoy.getMonth() + 1).padStart(2, '0');
-    const dia = String(hoy.getDate()).padStart(2, '0');
-    fechaISO = `${anio}-${mes}-${dia}`;
-    fechaTexto = `${dia}/${mes}/${anio}`;
+    fechaISO = '';
+    fechaTexto = '';
   }
 
   // Localizar contenedor principal de las farmacias
@@ -297,20 +293,20 @@ async function main() {
     }
   }
 
-  // Asegurar fecha por defecto
-  const hoy = new Date();
-  const fechaISO =
-    parsed.fechaISO ||
-    `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, '0')}-${String(
-      hoy.getDate()
-    ).padStart(2, '0')}`;
-  const fechaTexto = parsed.fechaTexto || `${hoy.getDate()}/${hoy.getMonth() + 1}/${hoy.getFullYear()}`;
+  // Validaciones estrictas para evitar sobrescribir con datos corruptos o vacíos
+  if (!parsed.farmacias || parsed.farmacias.length === 0) {
+    throw new Error('Validación fallida: El scraping obtuvo 0 farmacias. Se aborta la escritura para no sobrescribir con un array vacío.');
+  }
+
+  if (!parsed.fechaISO) {
+    throw new Error('Validación fallida: No se detectó la fecha en la web de COFATUC. Se aborta la escritura para proteger la integridad de los datos.');
+  }
 
   // Estructura completa de salida para data/farmaciasTurno.json
   const dataFinal = {
     ultimaActualizacion: new Date().toISOString(),
-    fecha: fechaISO,
-    fechaTexto: fechaTexto,
+    fecha: parsed.fechaISO,
+    fechaTexto: parsed.fechaTexto,
     horarioVigencia: '08:00 hs a 08:00 hs del día siguiente (24 horas)',
     fuente: 'Colegio de Farmacéuticos de Tucumán (COFATUC)',
     totalLocalidades: parsed.localidades.length,

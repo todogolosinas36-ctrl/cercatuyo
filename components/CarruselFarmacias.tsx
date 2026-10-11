@@ -14,9 +14,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import farmaciasFallback from '@/data/farmaciasTurno.json';
-
-const URL_FARMACIAS_RAW =
-  'https://raw.githubusercontent.com/todogolosinas36-ctrl/cercatuyo/master/data/farmaciasTurno.json';
+import { URL_FARMACIAS_RAW } from '@/config/urls';
 
 export interface FarmaciaItemCarrusel {
   id: string;

@@ -17,10 +17,8 @@ import {
   DIRECTORIO_FARMACIAS,
   Farmacia,
 } from '@/data/farmacias';
-
-// URL cruda (Raw) del archivo JSON en GitHub generado por GitHub Actions
-const URL_FARMACIAS_RAW =
-  'https://raw.githubusercontent.com/todogolosinas36-ctrl/cercatuyo/master/data/farmaciasTurno.json';
+import { URL_FARMACIAS_RAW } from '@/config/urls';
+import { fechaTurnoVigente, formatearFechaTurno } from '@/utils/fechaTurno';
 
 // Formateador de fecha amigable en español
 function formatearFechaAmigable(fecha: Date = new Date()): string {
@@ -70,6 +68,9 @@ export default function FarmaciasScreen() {
   const [farmaciasData, setFarmaciasData] = useState<any>(farmaciasFallback);
   const [refreshing, setRefreshing] = useState<boolean>(false);
   const [origenRemoto, setOrigenRemoto] = useState<boolean>(false);
+
+  // Verificación de si los datos mostrados corresponden al turno vigente
+  const desactualizado = farmaciasData?.fecha !== fechaTurnoVigente();
 
   // Fecha del sistema
   const fechaHoy = useMemo(() => new Date(), []);
@@ -285,15 +286,17 @@ export default function FarmaciasScreen() {
 
         <Text style={styles.mainTitle}>Farmacias de Turno</Text>
 
-        {/* Tarjeta de Fecha Actual */}
+        {/* Tarjeta de Fecha del Turno de Guardia */}
         <View style={styles.dateCard}>
           <View style={styles.dateIconWrapper}>
             <Ionicons name="calendar-outline" size={18} color="#2563EB" />
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={styles.dateLabel}>Fecha actual</Text>
+            <Text style={styles.dateLabel}>Turno correspondiente al</Text>
             <Text style={styles.dateText}>
-              {isMounted ? formatearFechaAmigable(fechaHoy) : 'Cargando fecha...'}
+              {isMounted
+                ? (farmaciasData?.fecha ? formatearFechaTurno(farmaciasData.fecha) : formatearFechaAmigable(fechaHoy))
+                : 'Cargando fecha...'}
             </Text>
           </View>
 
@@ -388,6 +391,16 @@ export default function FarmaciasScreen() {
             </Text>
           </View>
         </View>
+
+        {/* BANNER DE ADVERTENCIA SI EL TURNO ESTÁ DESACTUALIZADO */}
+        {desactualizado && (
+          <View style={styles.bannerDesactualizado}>
+            <Ionicons name="warning" size={20} color="#D97706" style={{ marginTop: 1 }} />
+            <Text style={styles.bannerDesactualizadoText}>
+              ⚠️ Los datos mostrados corresponden a un turno anterior. Confirmá por teléfono o en la web oficial.
+            </Text>
+          </View>
+        )}
 
         {farmaciasDeTurno.length > 0 ? (
           farmaciasDeTurno.map((farmacia, index) => (
@@ -791,6 +804,25 @@ const styles = StyleSheet.create({
     backgroundColor: '#EFF6FF',
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  bannerDesactualizado: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFBEB',
+    borderWidth: 1.5,
+    borderColor: '#F59E0B',
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    marginBottom: 16,
+    gap: 10,
+  },
+  bannerDesactualizadoText: {
+    flex: 1,
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#92400E',
+    lineHeight: 18,
   },
   vigenciaBanner: {
     flexDirection: 'row',
