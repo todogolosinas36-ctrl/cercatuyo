@@ -1,27 +1,19 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import {
   StyleSheet,
   Text,
   View,
   ScrollView,
   TouchableOpacity,
-  Linking,
-  Alert,
-  RefreshControl,
   Platform,
 } from 'react-native';
 import { router } from 'expo-router';
-import { Ionicons, MaterialCommunityIcons, FontAwesome5 } from '@expo/vector-icons';
-import farmaciasFallback from '@/data/farmaciasTurno.json';
-import { Farmacia } from '@/data/farmacias';
+import { Ionicons, FontAwesome5 } from '@expo/vector-icons';
 import { useOficios } from '@/context/OficiosContext';
 import ClimaWidget from '@/components/ClimaWidget';
+import CarruselFarmacias from '@/components/CarruselFarmacias';
 import { db } from '../../config/firebase';
 import { doc, setDoc, increment } from 'firebase/firestore';
-
-// URL cruda de GitHub para sincronización en tiempo real
-const URL_FARMACIAS_RAW =
-  'https://raw.githubusercontent.com/todogolosinas36-ctrl/cercatuyo/master/data/farmaciasTurno.json';
 
 // Formato de fecha en español
 function obtenerFechaHoy(): string {
@@ -72,41 +64,9 @@ const CATEGORIAS_DESTACADAS = [
 
 export default function HomeDashboardScreen() {
   const { trabajadores } = useOficios();
-  const [farmaciasData, setFarmaciasData] = useState<any>(farmaciasFallback);
-  const [refreshing, setRefreshing] = useState(false);
-  const [origenRemoto, setOrigenRemoto] = useState(false);
 
   // Fecha de hoy
   const fechaHoy = useMemo(() => obtenerFechaHoy(), []);
-
-  // Carga de farmacias de turno en vivo
-  const cargarFarmacias = async () => {
-    setRefreshing(true);
-    try {
-      const res = await fetch(`${URL_FARMACIAS_RAW}?_t=${Date.now()}`, {
-        headers: { Accept: 'application/json' },
-      });
-      if (res.status === 200) {
-        const data = await res.json();
-        if (data && (Array.isArray(data.farmacias) || Array.isArray(data.farmaciasDeTurno))) {
-          setFarmaciasData(data);
-          setOrigenRemoto(true);
-          return;
-        }
-      }
-      setFarmaciasData(farmaciasFallback);
-      setOrigenRemoto(false);
-    } catch (e) {
-      setFarmaciasData(farmaciasFallback);
-      setOrigenRemoto(false);
-    } finally {
-      setRefreshing(false);
-    }
-  };
-
-  useEffect(() => {
-    cargarFarmacias();
-  }, []);
 
   // Registrar visita global en Firestore (+1 a visitasTotales)
   useEffect(() => {
@@ -125,41 +85,11 @@ export default function HomeDashboardScreen() {
     registrarVisita();
   }, []);
 
-  // Buscar la farmacia de turno priorizando Aguilares
-  const farmaciaTurno = useMemo(() => {
-    const lista = (farmaciasData?.farmacias || farmaciasData?.farmaciasDeTurno || []) as Farmacia[];
-    const deAguilares = lista.find(
-      (f) => (f.localidad || f.ubicacion || '').toLowerCase() === 'aguilares'
-    );
-    return deAguilares || lista[0] || null;
-  }, [farmaciasData]);
-
-  // Manejo de llamadas telefónicas
-  const handleLlamar = (telefono?: string) => {
-    if (!telefono) {
-      Alert.alert('Teléfono no disponible', 'Esta farmacia no tiene teléfono registrado.');
-      return;
-    }
-    const limpio = telefono.replace(/\D/g, '');
-    Linking.openURL(`tel:${limpio}`);
-  };
-
-  // Abrir Google Maps
-  const handleAbrirMapa = (linkMapa?: string, nombre?: string, direccion?: string) => {
-    if (linkMapa) {
-      Linking.openURL(linkMapa);
-    } else {
-      const query = encodeURIComponent(`${nombre || 'Farmacia'} ${direccion || ''} Aguilares Tucuman`);
-      Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${query}`);
-    }
-  };
-
   return (
     <ScrollView
       style={styles.container}
       contentContainerStyle={styles.scrollContent}
       showsVerticalScrollIndicator={false}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={cargarFarmacias} colors={['#2563EB']} />}
     >
       {/* 1. ENCABEZADO Y BIENVENIDA */}
       <View style={styles.welcomeCard}>
@@ -198,11 +128,11 @@ export default function HomeDashboardScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* 2. WIDGET DESTACADO: FARMACIA DE TURNO */}
+      {/* 2. CARRUSEL DE FARMACIAS DE TURNO */}
       <View style={styles.sectionHeader}>
         <View style={styles.sectionTitleRow}>
           <Ionicons name="medkit" size={20} color="#059669" />
-          <Text style={styles.sectionTitle}>Farmacia de Turno Hoy</Text>
+          <Text style={styles.sectionTitle}>Farmacias de Turno Hoy</Text>
         </View>
         <TouchableOpacity
           style={styles.seeAllButton}
@@ -213,67 +143,11 @@ export default function HomeDashboardScreen() {
           <Ionicons name="chevron-forward" size={14} color="#2563EB" />
         </TouchableOpacity>
       </View>
+      <Text style={styles.sectionSubtitle}>
+        Guardias activas en Aguilares, Concepción, Alberdi y Monteros
+      </Text>
 
-      {farmaciaTurno ? (
-        <View style={styles.pharmacyCard}>
-          <View style={styles.pharmacyCardHeader}>
-            <View style={styles.pharmacyBadge}>
-              <View style={styles.pulseDot} />
-              <Text style={styles.pharmacyBadgeText}>ABIERTA 24 HS</Text>
-            </View>
-            <Text style={styles.pharmacyCityBadge}>
-              {farmaciaTurno.localidad || 'Aguilares'}
-            </Text>
-          </View>
-
-          <Text style={styles.pharmacyName}>{farmaciaTurno.nombre}</Text>
-
-          <View style={styles.pharmacyInfoRow}>
-            <Ionicons name="map-outline" size={16} color="#64748B" />
-            <Text style={styles.pharmacyAddress}>
-              {farmaciaTurno.direccion || 'Dirección no especificada'}
-            </Text>
-          </View>
-
-          {farmaciaTurno.telefono ? (
-            <View style={styles.pharmacyInfoRow}>
-              <Ionicons name="call-outline" size={16} color="#64748B" />
-              <Text style={styles.pharmacyPhone}>{farmaciaTurno.telefono}</Text>
-            </View>
-          ) : null}
-
-          <View style={styles.pharmacyActions}>
-            <TouchableOpacity
-              style={[styles.actionBtn, styles.callBtn]}
-              onPress={() => handleLlamar(farmaciaTurno.telefono)}
-              activeOpacity={0.8}
-            >
-              <Ionicons name="call" size={16} color="#FFFFFF" />
-              <Text style={styles.callBtnText}>Llamar ahora</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[styles.actionBtn, styles.mapBtn]}
-              onPress={() =>
-                handleAbrirMapa(
-                  farmaciaTurno.linkMapa,
-                  farmaciaTurno.nombre,
-                  farmaciaTurno.direccion
-                )
-              }
-              activeOpacity={0.8}
-            >
-              <Ionicons name="navigate-outline" size={16} color="#059669" />
-              <Text style={styles.mapBtnText}>Cómo llegar</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      ) : (
-        <View style={styles.pharmacyCardFallback}>
-          <Ionicons name="time-outline" size={32} color="#94A3B8" />
-          <Text style={styles.pharmacyFallbackText}>Cargando información de farmacia de turno...</Text>
-        </View>
-      )}
+      <CarruselFarmacias />
 
       {/* 3. ACCESOS RÁPIDOS A OFICIOS */}
       <View style={[styles.sectionHeader, { marginTop: 24 }]}>
