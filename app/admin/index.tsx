@@ -6,40 +6,34 @@ import {
   ScrollView,
   TouchableOpacity,
   Alert,
-  ActivityIndicator,
 } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { doc, getDoc } from 'firebase/firestore';
 import { useOficios } from '@/context/OficiosContext';
-import { db } from '@/config/firebase';
+import { db } from '../../config/firebase';
 
 export default function AdminDashboardScreen() {
   const { trabajadores, categorias } = useOficios();
-  const [visitas, setVisitas] = useState<number | null>(null);
-  const [cargandoVisitas, setCargandoVisitas] = useState<boolean>(true);
+  const [visitas, setVisitas] = useState<number | string>('Cargando...');
 
   useEffect(() => {
-    const obtenerVisitas = async () => {
+    const consultarEstadisticas = async () => {
       try {
-        setCargandoVisitas(true);
-        const docRef = doc(db, 'sistema', 'estadisticas');
-        const docSnap = await getDoc(docRef);
+        const docSnap = await getDoc(doc(db, 'sistema', 'estadisticas'));
         if (docSnap.exists()) {
           const data = docSnap.data();
-          setVisitas(data.visitas_totales ?? 0);
+          setVisitas(data.visitasTotales ?? 0);
         } else {
           setVisitas(0);
         }
       } catch (error) {
         console.warn('Error al obtener visitas de Firestore:', error);
-        setVisitas(0);
-      } finally {
-        setCargandoVisitas(false);
+        setVisitas('No disponible');
       }
     };
 
-    obtenerVisitas();
+    consultarEstadisticas();
   }, []);
 
   const handleFarmaciasPress = () => {
@@ -98,13 +92,9 @@ export default function AdminDashboardScreen() {
               <Text style={styles.trendBadgeText}>En vivo</Text>
             </View>
           </View>
-          {cargandoVisitas ? (
-            <ActivityIndicator size="small" color="#2563EB" style={{ marginVertical: 8, alignSelf: 'flex-start' }} />
-          ) : (
-            <Text style={styles.metricValue}>
-              {visitas !== null ? visitas.toLocaleString('es-AR') : '0'}
-            </Text>
-          )}
+          <Text style={styles.metricValue}>
+            {typeof visitas === 'number' ? visitas.toLocaleString('es-AR') : visitas}
+          </Text>
           <Text style={styles.metricLabel}>Visitas totales</Text>
           <Text style={styles.metricDetail}>En tiempo real (Firestore)</Text>
         </View>

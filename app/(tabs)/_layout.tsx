@@ -1,13 +1,11 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { FontAwesome, Ionicons } from '@expo/vector-icons';
 import { Tabs, router } from 'expo-router';
-import { doc, setDoc, increment } from 'firebase/firestore';
 
 import Colors from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
 import { useClientOnlyValue } from '@/components/useClientOnlyValue';
-import { db } from '@/config/firebase';
 
 function TabBarIcon(props: {
   name: React.ComponentProps<typeof FontAwesome>['name'];
@@ -34,20 +32,6 @@ function BrandHeaderTitle() {
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
-
-  // Registrar visita global en Firestore al iniciar la app
-  useEffect(() => {
-    const registrarVisita = async () => {
-      try {
-        const statsRef = doc(db, 'sistema', 'estadisticas');
-        await setDoc(statsRef, { visitas_totales: increment(1) }, { merge: true });
-      } catch (error) {
-        console.warn('No se pudo registrar la visita en Firestore:', error);
-      }
-    };
-
-    registrarVisita();
-  }, []);
 
   return (
     <Tabs

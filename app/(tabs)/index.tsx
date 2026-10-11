@@ -16,6 +16,8 @@ import farmaciasFallback from '@/data/farmaciasTurno.json';
 import { Farmacia } from '@/data/farmacias';
 import { useOficios } from '@/context/OficiosContext';
 import ClimaWidget from '@/components/ClimaWidget';
+import { db } from '../../config/firebase';
+import { doc, setDoc, increment } from 'firebase/firestore';
 
 // URL cruda de GitHub para sincronización en tiempo real
 const URL_FARMACIAS_RAW =
@@ -104,6 +106,23 @@ export default function HomeDashboardScreen() {
 
   useEffect(() => {
     cargarFarmacias();
+  }, []);
+
+  // Registrar visita global en Firestore (+1 a visitasTotales)
+  useEffect(() => {
+    const registrarVisita = async () => {
+      try {
+        await setDoc(
+          doc(db, 'sistema', 'estadisticas'),
+          { visitasTotales: increment(1) },
+          { merge: true }
+        );
+      } catch (error) {
+        console.warn('Error al registrar visita en Firestore:', error);
+      }
+    };
+
+    registrarVisita();
   }, []);
 
   // Buscar la farmacia de turno priorizando Aguilares
