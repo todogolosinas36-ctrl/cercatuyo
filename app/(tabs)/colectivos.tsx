@@ -17,9 +17,13 @@ import { router } from 'expo-router';
 import { TODOS_LOS_VIAJES, PRECIOS_TESA, Viaje } from '@/data/horarios';
 import {
   GUTIERREZ_DATA,
+  GUTIERREZ_ALPACHIRI_DATA,
   TipoDiaGutierrez,
+  RamalGutierrez,
   ServicioGutierrezIda,
   ServicioGutierrezVuelta,
+  ServicioAlpachiriIda,
+  ServicioAlpachiriVuelta,
 } from '@/constants/gutierrez';
 
 type EmpresaTipo = 'TESA' | 'Exprebus' | 'Gutierrez';
@@ -55,11 +59,47 @@ const EMPRESAS: { id: EmpresaTipo; label: string }[] = [
   { id: 'Gutierrez', label: 'Gutiérrez (Interurbano)' },
 ];
 
-const DIAS_GUTIERREZ: { id: TipoDiaGutierrez; label: string; badge: string }[] = [
-  { id: 'habiles', label: 'Lunes a Viernes', badge: '28 serv.' },
-  { id: 'sabados', label: 'Sábados', badge: '9 serv.' },
-  { id: 'domingos', label: 'Domingos y Feriados', badge: '3 serv.' },
+const DIAS_GUTIERREZ: { id: TipoDiaGutierrez; label: string }[] = [
+  { id: 'habiles', label: 'Lunes a Viernes' },
+  { id: 'sabados', label: 'Sábados' },
+  { id: 'domingos', label: 'Domingos y Feriados' },
 ];
+
+const RAMALES_GUTIERREZ: {
+  id: RamalGutierrez;
+  label: string;
+  icon: keyof typeof Ionicons.glyphMap;
+}[] = [
+  { id: 'medinas', label: 'Medinas / Monteagudo', icon: 'navigate-outline' },
+  { id: 'alpachiri', label: 'Alpachiri / Piedra Grande', icon: 'trail-sign-outline' },
+];
+
+// Devuelve el cuadro del día para el ramal activo (misma forma { ida, vuelta })
+function getCuadroGutierrezDia(ramal: RamalGutierrez, dia: TipoDiaGutierrez) {
+  return ramal === 'alpachiri' ? GUTIERREZ_ALPACHIRI_DATA[dia] : GUTIERREZ_DATA[dia];
+}
+
+// Normaliza texto para búsquedas sin distinguir mayúsculas ni tildes
+function normalizarTexto(valor: string): string {
+  return valor
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+}
+
+// Separa "Piedra Grande (08:00)" en { nombre: 'Piedra Grande', hora: '08:00' }
+function parseNombreHora(valor?: string | null): { nombre: string; hora: string | null } {
+  if (!valor) return { nombre: '', hora: null };
+  const m = valor.match(/^(.*?)\s*\((\d{1,2}:\d{2})\)\s*$/);
+  if (m) return { nombre: m[1].trim(), hora: m[2] };
+  return { nombre: valor.trim(), hora: null };
+}
+
+// Separa "07:25 (T)" en { hora: '07:25', esTerminal: true }
+function parseLlegadaConcepcion(valor: string): { hora: string; esTerminal: boolean } {
+  const esTerminal = /\(\s*T\s*\)/i.test(valor);
+  return { hora: valor.replace(/\s*\(\s*T\s*\)\s*/i, '').trim(), esTerminal };
+}
 
 // Función auxiliar para calcular duración estimada entre dos horas formato HH:mm
 function calcularDuracion(horaSalida: string, horaLlegada: string): string {
@@ -116,6 +156,18 @@ function getDestinoBadgeStyle(destino?: string | null) {
   if (d.includes('medinas')) {
     return { backgroundColor: '#F0FDFA', borderColor: '#99F6E4' };
   }
+  if (d.includes('piedra grande')) {
+    return { backgroundColor: '#FEF2F2', borderColor: '#FECACA' };
+  }
+  if (d.includes('el remate')) {
+    return { backgroundColor: '#FFF7ED', borderColor: '#FED7AA' };
+  }
+  if (d.includes('la calera')) {
+    return { backgroundColor: '#FDF4FF', borderColor: '#F5D0FE' };
+  }
+  if (d.includes('alpachiri')) {
+    return { backgroundColor: '#F0FDF4', borderColor: '#BBF7D0' };
+  }
   return { backgroundColor: '#F8FAFC', borderColor: '#E2E8F0' };
 }
 
@@ -132,6 +184,10 @@ function getDestinoBadgeColor(destino?: string | null) {
   if (d.includes('taller')) return '#475569';
   if (d.includes('monteagudo')) return '#0284C7';
   if (d.includes('medinas')) return '#0F766E';
+  if (d.includes('piedra grande')) return '#B91C1C';
+  if (d.includes('el remate')) return '#C2410C';
+  if (d.includes('la calera')) return '#A21CAF';
+  if (d.includes('alpachiri')) return '#15803D';
   return '#334155';
 }
 
@@ -156,6 +212,7 @@ export default function ColectivosScreen() {
   const [tipoDiaGutierrez, setTipoDiaGutierrez] = useState<TipoDiaGutierrez>('habiles');
   const [direccionGutierrez, setDireccionGutierrez] = useState<DireccionGutierrez>('ida');
   const [busquedaGutierrez, setBusquedaGutierrez] = useState('');
+  const [ramalGutierrez, setRamalGutierrez] = useState<RamalGutierrez>('medinas');
 
   // Preselección automática del día actual de la semana (SSR compatible)
   useEffect(() => {
@@ -230,8 +287,39 @@ export default function ColectivosScreen() {
     setDestino(origen);
   };
 
-  // Filtrado reactivo de viajes para Gutiérrez según tipo de día y búsqueda
+  const handleCambiarRamal = (nuevoRamal: RamalGutierrez) => {
+    setRamalGutierrez(nuevoRamal);
+    setBusquedaGutierrez('');
+  };
+
+  const cantidadSalidasGutierrez = getCuadroGutierrezDia(ramalGutierrez, tipoDiaGutierrez).ida.length;
+  const vigenciaGutierrez =
+    ramalGutierrez === 'alpachiri' ? GUTIERREZ_ALPACHIRI_DATA.vigencia : GUTIERREZ_DATA.vigencia;
+
+  // Filtrado reactivo de viajes para Gutiérrez según ramal, tipo de día y búsqueda
   const viajesGutierrezFiltrados = useMemo(() => {
+    // Ramal Alpachiri / Piedra Grande
+    if (ramalGutierrez === 'alpachiri') {
+      const cuadroAlp = GUTIERREZ_ALPACHIRI_DATA[tipoDiaGutierrez];
+      const listaAlp: any[] = direccionGutierrez === 'ida' ? cuadroAlp.ida : cuadroAlp.vuelta;
+      const termAlp = normalizarTexto(busquedaGutierrez.trim());
+      if (!termAlp) return listaAlp;
+
+      return listaAlp.filter((item) => {
+        const valores = Object.values(item)
+          .filter((v) => typeof v === 'string')
+          .join(' ');
+        // Todas las salidas pasan por El Molino y Alpachiri
+        const extra =
+          direccionGutierrez === 'ida'
+            ? ' el molino alpachiri italia y colon concepcion' +
+              (item.salidaTerminal ? ' terminal' : '')
+            : ' alpachiri el molino concepcion' +
+              (/\(\s*T\s*\)/i.test(item.llegadaConcepcion) ? ' terminal' : '');
+        return normalizarTexto(valores + extra).includes(termAlp);
+      });
+    }
+
     const cuadroDia =
       tipoDiaGutierrez === 'sabados'
         ? GUTIERREZ_DATA.sabados
@@ -273,7 +361,7 @@ export default function ColectivosScreen() {
         );
       });
     }
-  }, [tipoDiaGutierrez, direccionGutierrez, busquedaGutierrez]);
+  }, [ramalGutierrez, tipoDiaGutierrez, direccionGutierrez, busquedaGutierrez]);
 
   const valorActual =
     seleccionando === 'origen'
@@ -366,17 +454,50 @@ export default function ColectivosScreen() {
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={styles.gutierrezLineTitle}>
-                  {tipoDiaGutierrez === 'domingos'
+                  {ramalGutierrez === 'alpachiri'
+                    ? GUTIERREZ_ALPACHIRI_DATA.linea
+                    : tipoDiaGutierrez === 'domingos'
                     ? 'Concepción (24 y Colón) – La Trinidad – Medinas'
                     : GUTIERREZ_DATA.linea}
                 </Text>
                 <Text style={styles.gutierrezLineSubtitle}>
-                  {tipoDiaGutierrez === 'habiles' && 'Días Hábiles (Lunes a Viernes) • 28 salidas'}
-                  {tipoDiaGutierrez === 'sabados' && 'Sábados • 9 salidas'}
-                  {tipoDiaGutierrez === 'domingos' && 'Domingos y Feriados • 3 salidas'}
-                  {' • Vigencia: ' + GUTIERREZ_DATA.vigencia}
+                  {tipoDiaGutierrez === 'habiles' && 'Días Hábiles (Lunes a Viernes)'}
+                  {tipoDiaGutierrez === 'sabados' && 'Sábados'}
+                  {tipoDiaGutierrez === 'domingos' && 'Domingos y Feriados'}
+                  {' • ' + cantidadSalidasGutierrez + ' salidas'}
+                  {' • Vigencia: ' + vigenciaGutierrez}
                 </Text>
               </View>
+            </View>
+          </View>
+
+          {/* SELECTOR DE RAMAL GUTIÉRREZ */}
+          <View style={styles.ramalSelectorWrapper}>
+            <Text style={styles.selectorSectionLabel}>Ramal:</Text>
+            <View style={styles.ramalRow}>
+              {RAMALES_GUTIERREZ.map((ramalItem) => {
+                const isActive = ramalGutierrez === ramalItem.id;
+                return (
+                  <TouchableOpacity
+                    key={ramalItem.id}
+                    style={[styles.ramalTab, isActive && styles.ramalTabActive]}
+                    onPress={() => handleCambiarRamal(ramalItem.id)}
+                    activeOpacity={0.8}
+                  >
+                    <Ionicons
+                      name={ramalItem.icon}
+                      size={15}
+                      color={isActive ? '#FFFFFF' : '#0284C7'}
+                    />
+                    <Text
+                      style={[styles.ramalTabText, isActive && styles.ramalTabTextActive]}
+                      numberOfLines={2}
+                    >
+                      {ramalItem.label}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
             </View>
           </View>
 
@@ -410,7 +531,7 @@ export default function ColectivosScreen() {
                         isActive && styles.dayButtonBadgeActive,
                       ]}
                     >
-                      {diaItem.badge}
+                      {getCuadroGutierrezDia(ramalGutierrez, diaItem.id).ida.length + ' serv.'}
                     </Text>
                   </TouchableOpacity>
                 );
@@ -453,7 +574,11 @@ export default function ColectivosScreen() {
                   ]}
                   numberOfLines={2}
                 >
-                  {tipoDiaGutierrez === 'domingos'
+                  {ramalGutierrez === 'alpachiri'
+                    ? tipoDiaGutierrez === 'domingos'
+                      ? 'Concepción (Italia y Colón) ➔ El Molino ➔ Alpachiri'
+                      : 'Concepción ➔ El Molino ➔ Alpachiri ➔ Piedra Grande / El Remate / La Calera'
+                    : tipoDiaGutierrez === 'domingos'
                     ? 'Concepción (24 y Colón) ➔ La Trinidad ➔ Medinas'
                     : 'Concepción ➔ Trinidad / Medinas / Monteagudo'}
                 </Text>
@@ -490,7 +615,11 @@ export default function ColectivosScreen() {
                   ]}
                   numberOfLines={2}
                 >
-                  {tipoDiaGutierrez === 'domingos'
+                  {ramalGutierrez === 'alpachiri'
+                    ? tipoDiaGutierrez === 'domingos'
+                      ? 'Alpachiri ➔ Por La Calera ➔ Concepción'
+                      : 'Piedra Grande / El Remate / La Calera ➔ Alpachiri ➔ El Molino ➔ Concepción'
+                    : tipoDiaGutierrez === 'domingos'
                     ? 'Medinas ➔ La Trinidad ➔ Concepción'
                     : 'Monteagudo / Medinas / Trinidad ➔ Concepción'}
                 </Text>
@@ -504,7 +633,11 @@ export default function ColectivosScreen() {
               <Ionicons name="search" size={17} color="#64748B" />
               <TextInput
                 style={styles.searchInput}
-                placeholder="Buscar por parada o destino (ej. Medinas, Trinidad, Cristo Rey...)"
+                placeholder={
+                  ramalGutierrez === 'alpachiri'
+                    ? 'Buscar por parada o destino (ej. Alpachiri, Piedra Grande, El Remate...)'
+                    : 'Buscar por parada o destino (ej. Medinas, Trinidad, Cristo Rey...)'
+                }
                 placeholderTextColor="#94A3B8"
                 value={busquedaGutierrez}
                 onChangeText={setBusquedaGutierrez}
@@ -526,7 +659,7 @@ export default function ColectivosScreen() {
           <View style={styles.resultsHeader}>
             <Text style={styles.resultsTitle}>
               {direccionGutierrez === 'ida'
-                ? tipoDiaGutierrez === 'domingos'
+                ? tipoDiaGutierrez === 'domingos' && ramalGutierrez === 'medinas'
                   ? 'Salidas Concepción (24 y Colón)'
                   : 'Salidas desde Concepción'
                 : 'Salidas hacia Concepción'}
@@ -1052,6 +1185,284 @@ export default function ColectivosScreen() {
     );
   };
 
+  // Render Card ramal Alpachiri / Piedra Grande (Ida)
+  const renderAlpachiriCardIda = (item: ServicioAlpachiriIda) => {
+    const { nombre: destinoNombre, hora: destinoHora } = parseNombreHora(item.destinoFinal);
+    const iniciaEnTerminal = !!item.salidaTerminal;
+    const horaSalida = item.salidaTerminal || item.salidaItaliaColon;
+    const lugarSalida = iniciaEnTerminal ? 'Terminal' : 'Italia y Colón';
+    const llegadaLabel = destinoHora ? 'Llegada ' + destinoNombre : 'Paso Alpachiri';
+    const llegadaHora = destinoHora || item.llegadaAlpachiri;
+    const badgeExtra =
+      item.badge && normalizarTexto(item.badge) !== normalizarTexto(destinoNombre)
+        ? item.badge
+        : null;
+    const idCorto = item.id
+      .replace('ga-h-i-', 'H-')
+      .replace('ga-s-i-', 'S-')
+      .replace('ga-d-i-', 'D-');
+
+    return (
+      <View style={styles.gutierrezCard}>
+        {/* Cabecera */}
+        <View style={styles.gCardHeader}>
+          <View style={styles.gCardBadgeRow}>
+            <View style={styles.gEmpresaBadge}>
+              <FontAwesome name="bus" size={11} color="#0284C7" />
+              <Text style={styles.gEmpresaText}>Gutiérrez</Text>
+            </View>
+            <Text style={styles.gIdText}>#{idCorto}</Text>
+          </View>
+
+          <View style={[styles.gDestinoBadge, getDestinoBadgeStyle(destinoNombre)]}>
+            <Ionicons
+              name="location-sharp"
+              size={12}
+              color={getDestinoBadgeColor(destinoNombre)}
+            />
+            <Text
+              style={[styles.gDestinoBadgeText, { color: getDestinoBadgeColor(destinoNombre) }]}
+            >
+              {destinoNombre}
+            </Text>
+          </View>
+        </View>
+
+        {/* Horarios principales */}
+        <View style={styles.gTimeRow}>
+          <View style={styles.gTimeCol}>
+            <Text style={styles.gTimeLabel}>Salida Concepción</Text>
+            <Text style={styles.gTimeMain}>{horaSalida}</Text>
+            <Text style={styles.gTimeSub}>{lugarSalida}</Text>
+          </View>
+
+          <View style={styles.gArrowCol}>
+            <Ionicons name="arrow-forward" size={18} color="#94A3B8" />
+            <Text style={styles.gDirectoText}>Ramal</Text>
+          </View>
+
+          <View style={[styles.gTimeCol, { alignItems: 'flex-end' }]}>
+            <Text style={styles.gTimeLabel}>{llegadaLabel}</Text>
+            <Text style={[styles.gTimeMain, { color: '#0F172A' }]}>{llegadaHora}</Text>
+            <Text style={styles.gTimeSub}>{destinoNombre}</Text>
+          </View>
+        </View>
+
+        {/* Recorrido y tiempos de paso */}
+        <View style={styles.gTimelineContainer}>
+          <Text style={styles.gTimelineTitle}>Recorrido y tiempos de paso:</Text>
+          <View style={styles.gStopsRow}>
+            {iniciaEnTerminal && (
+              <View style={[styles.gStopPill, { backgroundColor: '#EFF6FF', borderColor: '#BFDBFE' }]}>
+                <Text style={[styles.gStopName, { color: '#1E40AF' }]}>Terminal</Text>
+                <Text style={[styles.gStopTime, { color: '#1E40AF' }]}>{item.salidaTerminal}</Text>
+              </View>
+            )}
+            <View style={styles.gStopPill}>
+              <Text style={styles.gStopName}>It. y Colón</Text>
+              <Text style={styles.gStopTime}>{item.salidaItaliaColon}</Text>
+            </View>
+            <View style={styles.gStopPill}>
+              <Text style={styles.gStopName}>El Molino</Text>
+              <Text style={styles.gStopTime}>{item.llegadaMolino}</Text>
+            </View>
+            <View style={styles.gStopPill}>
+              <Text style={styles.gStopName}>Alpachiri</Text>
+              <Text style={styles.gStopTime}>{item.llegadaAlpachiri}</Text>
+            </View>
+            {destinoHora && (
+              <View style={[styles.gStopPill, getDestinoBadgeStyle(destinoNombre)]}>
+                <Text style={[styles.gStopName, { color: getDestinoBadgeColor(destinoNombre) }]}>
+                  {destinoNombre}
+                </Text>
+                <Text style={[styles.gStopTime, { color: getDestinoBadgeColor(destinoNombre) }]}>
+                  {destinoHora}
+                </Text>
+              </View>
+            )}
+          </View>
+        </View>
+
+        {/* Badges y notas */}
+        <View style={styles.gFooterRow}>
+          <View style={styles.gBadgesWrap}>
+            <View
+              style={[
+                styles.gAttrBadge,
+                iniciaEnTerminal
+                  ? { backgroundColor: '#E0F2FE', borderColor: '#BAE6FD' }
+                  : { backgroundColor: '#F1F5F9', borderColor: '#E2E8F0' },
+              ]}
+            >
+              <Ionicons
+                name={iniciaEnTerminal ? 'bus-outline' : 'location-outline'}
+                size={11}
+                color={iniciaEnTerminal ? '#0369A1' : '#475569'}
+              />
+              <Text
+                style={[
+                  styles.gAttrBadgeText,
+                  { color: iniciaEnTerminal ? '#0369A1' : '#475569' },
+                ]}
+              >
+                {iniciaEnTerminal ? 'Inicia en Terminal' : 'Inicia en Italia y Colón'}
+              </Text>
+            </View>
+            {badgeExtra && !/terminal/i.test(badgeExtra) && (
+              <View style={[styles.gAttrBadge, { backgroundColor: '#FEF3C7', borderColor: '#FDE68A' }]}>
+                <Ionicons name="pricetag-outline" size={11} color="#B45309" />
+                <Text style={[styles.gAttrBadgeText, { color: '#B45309' }]}>{badgeExtra}</Text>
+              </View>
+            )}
+          </View>
+
+          {item.nota && <Text style={styles.gNotaText}>{item.nota}</Text>}
+        </View>
+      </View>
+    );
+  };
+
+  // Render Card ramal Alpachiri / Piedra Grande (Vuelta)
+  const renderAlpachiriCardVuelta = (item: ServicioAlpachiriVuelta) => {
+    const tieneOrigen = !!item.salidaOrigen;
+    const { nombre: nombreOrigen, hora: horaOrigen } = parseNombreHora(item.salidaOrigen);
+    const { hora: horaLlegada, esTerminal } = parseLlegadaConcepcion(item.llegadaConcepcion);
+
+    const horaSalida = horaOrigen || item.salidaAlpachiri;
+    const labelSalida = horaOrigen ? 'Salida origen' : 'Salida Alpachiri';
+    const subSalida = horaOrigen
+      ? nombreOrigen
+      : tieneOrigen
+      ? 'Origen: ' + nombreOrigen
+      : 'Alpachiri';
+    const badgeCabecera = item.recorrido || (tieneOrigen ? nombreOrigen : 'Alpachiri');
+    const badgeExtra =
+      item.badge &&
+      normalizarTexto(item.badge) !== normalizarTexto(nombreOrigen) &&
+      normalizarTexto(item.badge) !== normalizarTexto(item.recorrido || '') &&
+      normalizarTexto(item.badge) !== 'a terminal'
+        ? item.badge
+        : null;
+    const idCorto = item.id
+      .replace('ga-h-v-', 'H-')
+      .replace('ga-s-v-', 'S-')
+      .replace('ga-d-v-', 'D-');
+
+    return (
+      <View style={styles.gutierrezCard}>
+        {/* Cabecera */}
+        <View style={styles.gCardHeader}>
+          <View style={styles.gCardBadgeRow}>
+            <View style={styles.gEmpresaBadge}>
+              <FontAwesome name="bus" size={11} color="#0284C7" />
+              <Text style={styles.gEmpresaText}>Gutiérrez</Text>
+            </View>
+            <Text style={styles.gIdText}>#{idCorto}</Text>
+          </View>
+
+          <View style={[styles.gDestinoBadge, getDestinoBadgeStyle(badgeCabecera)]}>
+            <Ionicons
+              name="navigate-circle"
+              size={13}
+              color={getDestinoBadgeColor(badgeCabecera)}
+            />
+            <Text
+              style={[styles.gDestinoBadgeText, { color: getDestinoBadgeColor(badgeCabecera) }]}
+            >
+              {badgeCabecera}
+            </Text>
+          </View>
+        </View>
+
+        {/* Horarios principales */}
+        <View style={styles.gTimeRow}>
+          <View style={styles.gTimeCol}>
+            <Text style={styles.gTimeLabel}>{labelSalida}</Text>
+            <Text style={styles.gTimeMain}>{horaSalida}</Text>
+            <Text style={styles.gTimeSub}>{subSalida}</Text>
+          </View>
+
+          <View style={styles.gArrowCol}>
+            <Ionicons name="arrow-forward" size={18} color="#94A3B8" />
+            <Text style={styles.gDirectoText}>A Concepción</Text>
+          </View>
+
+          <View style={[styles.gTimeCol, { alignItems: 'flex-end' }]}>
+            <Text style={styles.gTimeLabel}>Llegada Concepción</Text>
+            <Text style={[styles.gTimeMain, { color: '#0F172A' }]}>{horaLlegada}</Text>
+            <Text style={styles.gTimeSub}>{esTerminal ? 'Terminal (T)' : 'Centro'}</Text>
+          </View>
+        </View>
+
+        {/* Recorrido y tiempos de paso */}
+        <View style={styles.gTimelineContainer}>
+          <Text style={styles.gTimelineTitle}>Recorrido y tiempos de paso:</Text>
+          <View style={styles.gStopsRow}>
+            {tieneOrigen && (
+              <View style={[styles.gStopPill, getDestinoBadgeStyle(nombreOrigen)]}>
+                <Text style={[styles.gStopName, { color: getDestinoBadgeColor(nombreOrigen) }]}>
+                  {nombreOrigen}
+                </Text>
+                <Text style={[styles.gStopTime, { color: getDestinoBadgeColor(nombreOrigen) }]}>
+                  {horaOrigen || 'Inicio'}
+                </Text>
+              </View>
+            )}
+            <View style={styles.gStopPill}>
+              <Text style={styles.gStopName}>Alpachiri</Text>
+              <Text style={styles.gStopTime}>{item.salidaAlpachiri}</Text>
+            </View>
+            {item.salidaMolino && (
+              <View style={styles.gStopPill}>
+                <Text style={styles.gStopName}>El Molino</Text>
+                <Text style={styles.gStopTime}>{item.salidaMolino}</Text>
+              </View>
+            )}
+            <View
+              style={[
+                styles.gStopPill,
+                esTerminal && { backgroundColor: '#E0F2FE', borderColor: '#7DD3FC' },
+              ]}
+            >
+              <Text style={[styles.gStopName, esTerminal && { color: '#0369A1' }]}>
+                {esTerminal ? 'Concepción (T)' : 'Concepción'}
+              </Text>
+              <Text style={[styles.gStopTime, esTerminal && { color: '#0369A1' }]}>{horaLlegada}</Text>
+            </View>
+          </View>
+        </View>
+
+        {/* Badges y notas */}
+        <View style={styles.gFooterRow}>
+          <View style={styles.gBadgesWrap}>
+            {item.recorrido && (
+              <View style={[styles.gAttrBadge, { backgroundColor: '#FDF4FF', borderColor: '#F5D0FE' }]}>
+                <Ionicons name="git-branch-outline" size={11} color="#A21CAF" />
+                <Text style={[styles.gAttrBadgeText, { color: '#A21CAF' }]}>{item.recorrido}</Text>
+              </View>
+            )}
+            {esTerminal && (
+              <View style={[styles.gAttrBadge, { backgroundColor: '#E0F2FE', borderColor: '#7DD3FC' }]}>
+                <Ionicons name="bus-outline" size={11} color="#0369A1" />
+                <Text style={[styles.gAttrBadgeText, { color: '#0369A1' }]}>
+                  Finaliza en Terminal (T)
+                </Text>
+              </View>
+            )}
+            {badgeExtra && (
+              <View style={[styles.gAttrBadge, { backgroundColor: '#FEF3C7', borderColor: '#FDE68A' }]}>
+                <Ionicons name="pricetag-outline" size={11} color="#B45309" />
+                <Text style={[styles.gAttrBadgeText, { color: '#B45309' }]}>{badgeExtra}</Text>
+              </View>
+            )}
+          </View>
+
+          {item.nota && <Text style={styles.gNotaText}>{item.nota}</Text>}
+        </View>
+      </View>
+    );
+  };
+
   // Render Component para TESA / Exprebus
   const renderItemTradicional = ({ item }: { item: Viaje }) => {
     const horaSalida = item.paradas?.[origen];
@@ -1171,7 +1582,11 @@ export default function ColectivosScreen() {
           data={viajesGutierrezFiltrados as any}
           keyExtractor={(item: any) => item.id}
           renderItem={({ item }) =>
-            tipoDiaGutierrez === 'domingos'
+            ramalGutierrez === 'alpachiri'
+              ? direccionGutierrez === 'ida'
+                ? renderAlpachiriCardIda(item)
+                : renderAlpachiriCardVuelta(item)
+              : tipoDiaGutierrez === 'domingos'
               ? renderGutierrezCardDomingo(item)
               : direccionGutierrez === 'ida'
               ? renderGutierrezCardIda(item)
@@ -1557,6 +1972,42 @@ const styles = StyleSheet.create({
   },
   directionTabSubtextActive: {
     color: '#E0F2FE',
+  },
+
+  /* SELECTOR DE RAMAL GUTIÉRREZ */
+  ramalSelectorWrapper: {
+    marginBottom: 14,
+  },
+  ramalRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  ramalTab: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#BAE6FD',
+    borderRadius: 14,
+    paddingVertical: 10,
+    paddingHorizontal: 8,
+  },
+  ramalTabActive: {
+    backgroundColor: '#0369A1',
+    borderColor: '#0369A1',
+  },
+  ramalTabText: {
+    flexShrink: 1,
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#0369A1',
+    textAlign: 'center',
+  },
+  ramalTabTextActive: {
+    color: '#FFFFFF',
   },
 
   /* BUSCADOR RÁPIDO GUTIÉRREZ */

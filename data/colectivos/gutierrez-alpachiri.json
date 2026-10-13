@@ -1,0 +1,69 @@
+{
+  "empresa": "Gutiérrez",
+  "ramal": "Alpachiri / Piedra Grande",
+  "linea": "Concepción - El Molino - Alpachiri - Piedra Grande",
+  "vigencia": "Desde 27/07/2026",
+  "habiles": {
+    "ida": [
+      { "id": "ga-h-i-1", "salidaTerminal": null, "salidaItaliaColon": "05:10", "llegadaMolino": "05:25", "llegadaAlpachiri": "05:30", "destinoFinal": "La Calera", "badge": "La Calera", "nota": "Llega a La Calera" },
+      { "id": "ga-h-i-2", "salidaTerminal": null, "salidaItaliaColon": "06:00", "llegadaMolino": "06:15", "llegadaAlpachiri": "06:35", "destinoFinal": "El Remate", "badge": "El Remate", "nota": "Llega a El Remate" },
+      { "id": "ga-h-i-3", "salidaTerminal": null, "salidaItaliaColon": "06:10", "llegadaMolino": "06:20", "llegadaAlpachiri": "06:30", "destinoFinal": "La Calera", "badge": "La Calera", "nota": "Llega a La Calera" },
+      { "id": "ga-h-i-4", "salidaTerminal": null, "salidaItaliaColon": "07:15", "llegadaMolino": "07:35", "llegadaAlpachiri": "07:50", "destinoFinal": "Piedra Grande (08:00)", "badge": "Piedra Grande", "nota": "Servicio completo a Piedra Grande" },
+      { "id": "ga-h-i-5", "salidaTerminal": null, "salidaItaliaColon": "09:00", "llegadaMolino": "09:20", "llegadaAlpachiri": "09:35", "destinoFinal": "El Remate", "badge": "El Remate", "nota": "Llega a El Remate" },
+      { "id": "ga-h-i-6", "salidaTerminal": "11:05", "salidaItaliaColon": "11:15", "llegadaMolino": "11:35", "llegadaAlpachiri": "11:50", "destinoFinal": "El Remate", "badge": "Sale Terminal", "nota": "Sale de Terminal 11:05" },
+      { "id": "ga-h-i-7", "salidaTerminal": "11:50", "salidaItaliaColon": "12:00", "llegadaMolino": "12:20", "llegadaAlpachiri": "12:35", "destinoFinal": "Piedra Grande (12:45)", "badge": "Piedra Grande", "nota": "Sale de Terminal 11:50" },
+      { "id": "ga-h-i-8", "salidaTerminal": "12:30", "salidaItaliaColon": "12:40", "llegadaMolino": "13:00", "llegadaAlpachiri": "13:15", "destinoFinal": "El Remate", "badge": "Sale Terminal", "nota": "Sale de Terminal 12:30" },
+      { "id": "ga-h-i-9", "salidaTerminal": "13:55", "salidaItaliaColon": "14:05", "llegadaMolino": "14:25", "llegadaAlpachiri": "14:40", "destinoFinal": "El Remate", "badge": "Sale Terminal", "nota": "Sale de Terminal 13:55" },
+      { "id": "ga-h-i-10", "salidaTerminal": null, "salidaItaliaColon": "15:10", "llegadaMolino": "15:30", "llegadaAlpachiri": "15:45", "destinoFinal": "La Calera", "badge": "La Calera", "nota": "Llega a La Calera" },
+      { "id": "ga-h-i-11", "salidaTerminal": null, "salidaItaliaColon": "17:00", "llegadaMolino": "17:20", "llegadaAlpachiri": "17:35", "destinoFinal": "El Remate", "badge": "El Remate", "nota": "Llega a El Remate" },
+      { "id": "ga-h-i-12", "salidaTerminal": null, "salidaItaliaColon": "18:35", "llegadaMolino": "18:55", "llegadaAlpachiri": "19:10", "destinoFinal": "El Remate", "badge": "El Remate", "nota": "Llega a El Remate" },
+      { "id": "ga-h-i-13", "salidaTerminal": "20:10", "salidaItaliaColon": "20:20", "llegadaMolino": "20:35", "llegadaAlpachiri": "20:55", "destinoFinal": "El Remate", "badge": "Sale Terminal", "nota": "Sale de Terminal 20:10" },
+      { "id": "ga-h-i-14", "salidaTerminal": "21:20", "salidaItaliaColon": "21:30", "llegadaMolino": "21:45", "llegadaAlpachiri": "22:05", "destinoFinal": "Piedra Grande (22:15)", "badge": "Piedra Grande", "nota": "Último servicio a Piedra Grande" }
+    ],
+    "vuelta": [
+      { "id": "ga-h-v-1", "salidaOrigen": "El Remate", "salidaAlpachiri": "06:35", "salidaMolino": "06:50", "llegadaConcepcion": "07:10", "badge": "El Remate", "nota": "Inicia en El Remate" },
+      { "id": "ga-h-v-2", "salidaOrigen": "Piedra Grande (06:40)", "salidaAlpachiri": "06:50", "salidaMolino": "07:10", "llegadaConcepcion": "07:25 (T)", "badge": "A Terminal", "nota": "Llega a Terminal Concepción" },
+      { "id": "ga-h-v-3", "salidaOrigen": "Piedra Grande (08:10)", "salidaAlpachiri": "08:25", "salidaMolino": "08:40", "llegadaConcepcion": "09:00", "badge": "Piedra Grande", "nota": "Sale de Piedra Grande" },
+      { "id": "ga-h-v-4", "salidaOrigen": "El Remate", "salidaAlpachiri": "09:35", "salidaMolino": "09:50", "llegadaConcepcion": "10:10", "badge": "El Remate", "nota": "Inicia en El Remate" },
+      { "id": "ga-h-v-5", "salidaOrigen": "El Remate", "salidaAlpachiri": "11:50", "salidaMolino": "12:05", "llegadaConcepcion": "12:25 (T)", "badge": "A Terminal", "nota": "Llega a Terminal Concepción" },
+      { "id": "ga-h-v-6", "salidaOrigen": "Piedra Grande (13:00)", "salidaAlpachiri": "13:10", "salidaMolino": "13:25", "llegadaConcepcion": "13:45", "badge": "Piedra Grande", "nota": "Sale de Piedra Grande" },
+      { "id": "ga-h-v-7", "salidaOrigen": "El Remate", "salidaAlpachiri": "13:25", "salidaMolino": "13:40", "llegadaConcepcion": "14:00", "badge": "El Remate", "nota": "Inicia en El Remate" },
+      { "id": "ga-h-v-8", "salidaOrigen": "La Calera", "salidaAlpachiri": "14:30", "salidaMolino": "14:45", "llegadaConcepcion": "15:05", "badge": "La Calera", "nota": "Inicia en La Calera" },
+      { "id": "ga-h-v-9", "salidaOrigen": "Piedra Grande (15:50)", "salidaAlpachiri": "16:05", "salidaMolino": "16:20", "llegadaConcepcion": "16:40", "badge": "Piedra Grande", "nota": "Sale de Piedra Grande" },
+      { "id": "ga-h-v-10", "salidaOrigen": "El Remate", "salidaAlpachiri": "17:40", "salidaMolino": "17:55", "llegadaConcepcion": "18:15", "badge": "El Remate", "nota": "Inicia en El Remate" },
+      { "id": "ga-h-v-11", "salidaOrigen": "El Remate", "salidaAlpachiri": "19:20", "salidaMolino": "19:35", "llegadaConcepcion": "19:55", "badge": "El Remate", "nota": "Inicia en El Remate" },
+      { "id": "ga-h-v-12", "salidaOrigen": "El Remate", "salidaAlpachiri": "20:55", "salidaMolino": "21:10", "llegadaConcepcion": "21:30", "badge": "El Remate", "nota": "Inicia en El Remate" },
+      { "id": "ga-h-v-13", "salidaOrigen": "La Calera", "salidaAlpachiri": "21:50", "salidaMolino": "22:05", "llegadaConcepcion": "22:20", "badge": "La Calera", "nota": "Inicia en La Calera" },
+      { "id": "ga-h-v-14", "salidaOrigen": "Piedra Grande (22:15)", "salidaAlpachiri": "22:25", "salidaMolino": "22:40", "llegadaConcepcion": "23:00", "badge": "Piedra Grande", "nota": "Última vuelta" }
+    ]
+  },
+  "sabados": {
+    "ida": [
+      { "id": "ga-s-i-1", "salidaTerminal": null, "salidaItaliaColon": "07:50", "llegadaMolino": "08:10", "llegadaAlpachiri": "08:25", "destinoFinal": "Alpachiri", "badge": "Matutino", "nota": null },
+      { "id": "ga-s-i-2", "salidaTerminal": "11:05", "salidaItaliaColon": "11:15", "llegadaMolino": "11:35", "llegadaAlpachiri": "11:50", "destinoFinal": "Alpachiri", "badge": "Sale Terminal", "nota": "Sale de Terminal 11:05" },
+      { "id": "ga-s-i-3", "salidaTerminal": "12:25", "salidaItaliaColon": "12:35", "llegadaMolino": "12:55", "llegadaAlpachiri": "13:10", "destinoFinal": "Alpachiri", "badge": "Sale Terminal", "nota": "Sale de Terminal 12:25" },
+      { "id": "ga-s-i-4", "salidaTerminal": null, "salidaItaliaColon": "16:45", "llegadaMolino": "17:05", "llegadaAlpachiri": "17:20", "destinoFinal": "Alpachiri", "badge": "Tarde", "nota": null },
+      { "id": "ga-s-i-5", "salidaTerminal": "20:10", "salidaItaliaColon": "20:20", "llegadaMolino": "20:40", "llegadaAlpachiri": "20:50", "destinoFinal": "Alpachiri", "badge": "Sale Terminal", "nota": "Sale de Terminal 20:10" },
+      { "id": "ga-s-i-6", "salidaTerminal": "21:25", "salidaItaliaColon": "21:30", "llegadaMolino": "21:50", "llegadaAlpachiri": "22:05", "destinoFinal": "Alpachiri", "badge": "Último", "nota": "Sale de Terminal 21:25" }
+    ],
+    "vuelta": [
+      { "id": "ga-s-v-1", "salidaOrigen": "El Remate", "salidaAlpachiri": "07:15", "salidaMolino": "07:30", "llegadaConcepcion": "07:50", "badge": "El Remate", "nota": "Inicia en El Remate" },
+      { "id": "ga-s-v-2", "salidaOrigen": "El Remate", "salidaAlpachiri": "08:25", "salidaMolino": "08:40", "llegadaConcepcion": "09:00", "badge": "El Remate", "nota": "Inicia en El Remate" },
+      { "id": "ga-s-v-3", "salidaOrigen": "El Remate", "salidaAlpachiri": "11:50", "salidaMolino": "12:05", "llegadaConcepcion": "12:25", "badge": "El Remate", "nota": "Inicia en El Remate" },
+      { "id": "ga-s-v-4", "salidaOrigen": "El Remate", "salidaAlpachiri": "16:00", "salidaMolino": "16:15", "llegadaConcepcion": "16:35", "badge": "El Remate", "nota": "Inicia en El Remate" },
+      { "id": "ga-s-v-5", "salidaOrigen": "El Remate", "salidaAlpachiri": "17:20", "salidaMolino": "17:35", "llegadaConcepcion": "17:55", "badge": "El Remate", "nota": "Inicia en El Remate" },
+      { "id": "ga-s-v-6", "salidaOrigen": "El Remate", "salidaAlpachiri": "20:50", "salidaMolino": "21:05", "llegadaConcepcion": "21:25", "badge": "El Remate", "nota": "Inicia en El Remate" },
+      { "id": "ga-s-v-7", "salidaOrigen": "La Calera", "salidaAlpachiri": "21:50", "salidaMolino": "22:05", "llegadaConcepcion": "22:20", "badge": "La Calera", "nota": "Inicia en La Calera" }
+    ]
+  },
+  "domingos": {
+    "ida": [
+      { "id": "ga-d-i-1", "salidaItaliaColon": "09:00", "llegadaMolino": "09:20", "llegadaAlpachiri": "09:35", "destinoFinal": "Alpachiri", "badge": "Mañana", "nota": "Sale de Italia y Colón" },
+      { "id": "ga-d-i-2", "salidaItaliaColon": "18:30", "llegadaMolino": "18:50", "llegadaAlpachiri": "19:05", "destinoFinal": "Alpachiri", "badge": "Tarde", "nota": "Sale de Italia y Colón" }
+    ],
+    "vuelta": [
+      { "id": "ga-d-v-1", "salidaAlpachiri": "09:35", "recorrido": "Por La Calera", "llegadaConcepcion": "10:15", "badge": "Por La Calera", "nota": "Vuelta directa por La Calera" },
+      { "id": "ga-d-v-2", "salidaAlpachiri": "19:20", "recorrido": "Por La Calera", "llegadaConcepcion": "20:00", "badge": "Por La Calera", "nota": "Vuelta directa por La Calera" }
+    ]
+  }
+}
