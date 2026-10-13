@@ -3,7 +3,7 @@ import { getFirestore } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 
 const firebaseConfig = {
-  apiKey: "AIzaSyBLNRKhpbsgteKAK7lOPuUks_lNmuOClx0",
+  apiKey: "AIzaSyBLNRKhpbsgteKAk7lOPuUks_lNmuOClx0",
   authDomain: "cercatuyo-app.firebaseapp.com",
   projectId: "cercatuyo-app",
   storageBucket: "cercatuyo-app.firebasestorage.app",

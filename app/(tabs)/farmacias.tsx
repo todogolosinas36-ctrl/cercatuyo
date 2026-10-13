@@ -294,9 +294,11 @@ export default function FarmaciasScreen() {
           <View style={{ flex: 1 }}>
             <Text style={styles.dateLabel}>Turno correspondiente al</Text>
             <Text style={styles.dateText}>
-              {farmaciasData?.fecha
-                ? formatearFechaTurno(farmaciasData.fecha)
-                : (isMounted ? formatearFechaAmigable(fechaHoy) : 'Cargando fecha...')}
+              {isMounted
+                ? (farmaciasData?.fecha
+                    ? formatearFechaTurno(farmaciasData.fecha)
+                    : formatearFechaAmigable(fechaHoy))
+                : ''}
             </Text>
           </View>
 
@@ -393,7 +395,7 @@ export default function FarmaciasScreen() {
         </View>
 
         {/* BANNER DE ADVERTENCIA SI EL TURNO ESTÁ DESACTUALIZADO */}
-        {desactualizado && (
+        {isMounted && desactualizado && (
           <View style={styles.bannerDesactualizado}>
             <Ionicons name="warning" size={20} color="#D97706" style={{ marginTop: 1 }} />
             <Text style={styles.bannerDesactualizadoText}>
