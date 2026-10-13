@@ -46,8 +46,11 @@ export default function AdminLayout() {
     setSubmitting(true);
     setError('');
 
+    const correoLimpio = correo.trim();
+    const emailAUsar = correoLimpio.toLowerCase() === 'admin' ? 'exejkj@gmail.com' : correoLimpio;
+
     try {
-      await signInWithEmailAndPassword(auth, correo.trim(), password);
+      await signInWithEmailAndPassword(auth, emailAUsar, password);
       setCorreo('');
       setPassword('');
     } catch (err: any) {

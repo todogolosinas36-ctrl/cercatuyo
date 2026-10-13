@@ -15,12 +15,6 @@ export default function AdminDashboardScreen() {
   const { trabajadores, categorias } = useOficios();
   const [isMounted, setIsMounted] = useState(false);
 
-  // NOTA ARQUITECTURA (B-12):
-  // Se eliminó la lectura y escritura del contador de visitas en Firestore ('sistema/estadisticas')
-  // para evitar costos y cuotas innecesarias de operaciones de base de datos en Firebase.
-  // Se recomienda integrar un script de analítica web ligero y externo (como Plausible Analytics,
-  // Umami o Google Analytics 4) para medir visitantes únicos, páginas vistas y fuentes en tiempo real.
-
   useEffect(() => {
     setIsMounted(true);
   }, []);
