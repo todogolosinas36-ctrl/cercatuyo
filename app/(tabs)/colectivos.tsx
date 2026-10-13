@@ -19,6 +19,7 @@ import {
   GUTIERREZ_DATA,
   GUTIERREZ_ALPACHIRI_DATA,
   GUTIERREZ_SARMIENTOS_DATA,
+  GUTIERREZ_AGUDOS_DATA,
   TipoDiaGutierrez,
   RamalGutierrez,
   ServicioGutierrezIda,
@@ -27,6 +28,8 @@ import {
   ServicioAlpachiriVuelta,
   ServicioSarmientosIda,
   ServicioSarmientosVuelta,
+  ServicioAgudosHaciaAguilares,
+  ServicioAgudosDesdeAguilares,
 } from '@/constants/gutierrez';
 
 type EmpresaTipo = 'TESA' | 'Exprebus' | 'Gutierrez';
@@ -76,10 +79,17 @@ const RAMALES_GUTIERREZ: {
   { id: 'medinas', label: 'Medinas / Monteagudo', icon: 'navigate-outline' },
   { id: 'alpachiri', label: 'Alpachiri / P. Grande', icon: 'trail-sign-outline' },
   { id: 'sarmientos', label: 'Aguilares / Sarmientos / M. Bello', icon: 'git-branch-outline' },
+  { id: 'agudos', label: 'Los Agudos / Aguilares', icon: 'map-outline' },
 ];
 
 // Devuelve el cuadro del día para el ramal activo (misma forma { ida, vuelta })
 function getCuadroGutierrezDia(ramal: RamalGutierrez, dia: TipoDiaGutierrez) {
+  if (ramal === 'agudos') {
+    return {
+      ida: dia === 'habiles' ? GUTIERREZ_AGUDOS_DATA.haciaAguilares : [],
+      vuelta: dia === 'habiles' ? GUTIERREZ_AGUDOS_DATA.desdeAguilares : [],
+    };
+  }
   if (ramal === 'sarmientos') return GUTIERREZ_SARMIENTOS_DATA[dia];
   return ramal === 'alpachiri' ? GUTIERREZ_ALPACHIRI_DATA[dia] : GUTIERREZ_DATA[dia];
 }
@@ -191,6 +201,9 @@ function getDestinoBadgeStyle(destino?: string | null) {
   if (d.includes('aguilares')) {
     return { backgroundColor: '#ECFEFF', borderColor: '#A5F3FC' };
   }
+  if (d.includes('agudos')) {
+    return { backgroundColor: '#FEF3C7', borderColor: '#FDE68A' };
+  }
   return { backgroundColor: '#F8FAFC', borderColor: '#E2E8F0' };
 }
 
@@ -214,6 +227,7 @@ function getDestinoBadgeColor(destino?: string | null) {
   if (d.includes('monte bello')) return '#BE123C';
   if (d.includes('sarmientos')) return '#A16207';
   if (d.includes('aguilares')) return '#0E7490';
+  if (d.includes('agudos')) return '#B45309';
   return '#334155';
 }
 
@@ -316,11 +330,16 @@ export default function ColectivosScreen() {
   const handleCambiarRamal = (nuevoRamal: RamalGutierrez) => {
     setRamalGutierrez(nuevoRamal);
     setBusquedaGutierrez('');
+    if (nuevoRamal === 'agudos' && tipoDiaGutierrez !== 'habiles') {
+      setTipoDiaGutierrez('habiles');
+    }
   };
 
   const cantidadSalidasGutierrez = getCuadroGutierrezDia(ramalGutierrez, tipoDiaGutierrez).ida.length;
   const vigenciaGutierrez =
-    ramalGutierrez === 'sarmientos'
+    ramalGutierrez === 'agudos'
+      ? GUTIERREZ_AGUDOS_DATA.vigencia
+      : ramalGutierrez === 'sarmientos'
       ? GUTIERREZ_SARMIENTOS_DATA.vigencia
       : ramalGutierrez === 'alpachiri'
       ? GUTIERREZ_ALPACHIRI_DATA.vigencia
@@ -328,6 +347,25 @@ export default function ColectivosScreen() {
 
   // Filtrado reactivo de viajes para Gutiérrez según ramal, tipo de día y búsqueda
   const viajesGutierrezFiltrados = useMemo(() => {
+    // Ramal Los Agudos / Aguilares
+    if (ramalGutierrez === 'agudos') {
+      if (tipoDiaGutierrez !== 'habiles') return [];
+      const listaAg: any[] =
+        direccionGutierrez === 'ida'
+          ? GUTIERREZ_AGUDOS_DATA.haciaAguilares
+          : GUTIERREZ_AGUDOS_DATA.desdeAguilares;
+      const termAg = normalizarTexto(busquedaGutierrez.trim());
+      if (!termAg) return listaAg;
+
+      return listaAg.filter((item) => {
+        const valores = Object.values(item)
+          .filter((v) => typeof v === 'string')
+          .join(' ');
+        const extra = ' los agudos aguilares entrada medinas concepcion lunes viernes';
+        return normalizarTexto(valores + extra).includes(termAg);
+      });
+    }
+
     // Ramal Aguilares / Los Sarmientos / Monte Bello
     if (ramalGutierrez === 'sarmientos') {
       const cuadroSar = GUTIERREZ_SARMIENTOS_DATA[tipoDiaGutierrez];
@@ -504,7 +542,9 @@ export default function ColectivosScreen() {
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={styles.gutierrezLineTitle}>
-                  {ramalGutierrez === 'sarmientos'
+                  {ramalGutierrez === 'agudos'
+                    ? GUTIERREZ_AGUDOS_DATA.linea
+                    : ramalGutierrez === 'sarmientos'
                     ? tipoDiaGutierrez === 'domingos'
                       ? 'Aguilares – Los Sarmientos – Monte Bello'
                       : GUTIERREZ_SARMIENTOS_DATA.linea
@@ -561,20 +601,28 @@ export default function ColectivosScreen() {
             <View style={styles.daySelectorRow}>
               {DIAS_GUTIERREZ.map((diaItem) => {
                 const isActive = tipoDiaGutierrez === diaItem.id;
+                const isDisabled = ramalGutierrez === 'agudos' && diaItem.id !== 'habiles';
                 return (
                   <TouchableOpacity
                     key={diaItem.id}
                     style={[
                       styles.dayButton,
                       isActive && styles.dayButtonActive,
+                      isDisabled && styles.dayButtonDisabled,
                     ]}
-                    onPress={() => setTipoDiaGutierrez(diaItem.id)}
-                    activeOpacity={0.8}
+                    onPress={() => {
+                      if (!isDisabled) {
+                        setTipoDiaGutierrez(diaItem.id);
+                      }
+                    }}
+                    disabled={isDisabled}
+                    activeOpacity={isDisabled ? 1 : 0.8}
                   >
                     <Text
                       style={[
                         styles.dayButtonText,
                         isActive && styles.dayButtonTextActive,
+                        isDisabled && styles.dayButtonTextDisabled,
                       ]}
                     >
                       {diaItem.label}
@@ -583,14 +631,25 @@ export default function ColectivosScreen() {
                       style={[
                         styles.dayButtonBadge,
                         isActive && styles.dayButtonBadgeActive,
+                        isDisabled && styles.dayButtonBadgeDisabled,
                       ]}
                     >
-                      {getCuadroGutierrezDia(ramalGutierrez, diaItem.id).ida.length + ' serv.'}
+                      {isDisabled
+                        ? 'No op.'
+                        : getCuadroGutierrezDia(ramalGutierrez, diaItem.id).ida.length + ' serv.'}
                     </Text>
                   </TouchableOpacity>
                 );
               })}
             </View>
+            {ramalGutierrez === 'agudos' && (
+              <View style={styles.agudosDiaDisabledNotice}>
+                <Ionicons name="information-circle-outline" size={14} color="#64748B" />
+                <Text style={styles.agudosDiaDisabledText}>
+                  Servicio solo disponible en Días Hábiles (Lunes a Viernes)
+                </Text>
+              </View>
+            )}
           </View>
 
           {/* SELECTOR DE DIRECCIÓN (IDA / VUELTA) */}
@@ -628,7 +687,9 @@ export default function ColectivosScreen() {
                   ]}
                   numberOfLines={2}
                 >
-                  {ramalGutierrez === 'sarmientos'
+                  {ramalGutierrez === 'agudos'
+                    ? 'Los Agudos / Concepción ➔ Entrada Medinas ➔ Aguilares'
+                    : ramalGutierrez === 'sarmientos'
                     ? tipoDiaGutierrez === 'domingos'
                       ? 'Aguilares ➔ Los Sarmientos ➔ Monte Bello'
                       : 'Concepción ➔ Aguilares ➔ Los Sarmientos ➔ Monte Bello'
@@ -673,7 +734,9 @@ export default function ColectivosScreen() {
                   ]}
                   numberOfLines={2}
                 >
-                  {ramalGutierrez === 'sarmientos'
+                  {ramalGutierrez === 'agudos'
+                    ? 'Aguilares ➔ Entrada Medinas ➔ Los Agudos / Concepción'
+                    : ramalGutierrez === 'sarmientos'
                     ? tipoDiaGutierrez === 'domingos'
                       ? 'Monte Bello ➔ Los Sarmientos ➔ Aguilares'
                       : 'Monte Bello ➔ Los Sarmientos ➔ Aguilares ➔ Concepción'
@@ -696,7 +759,9 @@ export default function ColectivosScreen() {
               <TextInput
                 style={styles.searchInput}
                 placeholder={
-                  ramalGutierrez === 'sarmientos'
+                  ramalGutierrez === 'agudos'
+                    ? 'Buscar por parada o día (ej. Los Agudos, Concepción, Entrada Medinas, Lunes...)'
+                    : ramalGutierrez === 'sarmientos'
                     ? 'Buscar por parada o destino (ej. Aguilares, Sarmientos, Monte Bello...)'
                     : ramalGutierrez === 'alpachiri'
                     ? 'Buscar por parada o destino (ej. Alpachiri, Piedra Grande, El Remate...)'
@@ -722,7 +787,11 @@ export default function ColectivosScreen() {
           {/* Título de Resultados de Gutiérrez */}
           <View style={styles.resultsHeader}>
             <Text style={styles.resultsTitle}>
-              {ramalGutierrez === 'sarmientos' && tipoDiaGutierrez === 'domingos'
+              {ramalGutierrez === 'agudos'
+                ? direccionGutierrez === 'ida'
+                  ? 'Salidas hacia Aguilares'
+                  : 'Salidas desde Aguilares'
+                : ramalGutierrez === 'sarmientos' && tipoDiaGutierrez === 'domingos'
                 ? direccionGutierrez === 'ida'
                   ? 'Salidas desde Aguilares'
                   : 'Salidas hacia Aguilares'
@@ -737,6 +806,16 @@ export default function ColectivosScreen() {
               {viajesGutierrezFiltrados.length === 1 ? 'servicio' : 'servicios'}
             </Text>
           </View>
+
+          {/* Banner informativo amarillo para Los Agudos */}
+          {ramalGutierrez === 'agudos' && (
+            <View style={styles.agudosBannerAmarillo}>
+              <Ionicons name="alert-circle" size={17} color="#B45309" />
+              <Text style={styles.agudosBannerAmarilloText}>
+                Vueltas a Concepción solo días lunes y viernes ida y vuelta
+              </Text>
+            </View>
+          )}
 
           {/* Aviso: domingos el ramal Sarmientos inicia/termina en Aguilares */}
           {ramalGutierrez === 'sarmientos' && tipoDiaGutierrez === 'domingos' && (
@@ -2013,6 +2092,253 @@ export default function ColectivosScreen() {
     );
   };
 
+  // ===== Ramal Los Agudos / Aguilares =====
+  const agudosIdCorto = (id: string) =>
+    id.replace(/^ga-h-ag-/, 'H-AG-').replace(/^ga-d-ag-/, 'D-AG-');
+
+  // Hacia Aguilares (Ida): Partida Los Agudos o Concepción ➔ Paso Entrada Medinas ➔ Llegada Aguilares
+  const renderAgudosCardHaciaAguilares = (item: ServicioAgudosHaciaAguilares) => {
+    const esConcepcion = !!item.salidaConcepcion;
+    const horaSalida = item.salidaConcepcion || item.salidaLosAgudos || '';
+    const labelSalida = esConcepcion ? 'Salida Concepción' : 'Salida Los Agudos';
+    const subSalida = esConcepcion ? 'Conexión Concepción' : 'Los Agudos';
+    const esSoloLunesViernes = item.dias === 'Solo Lunes y Viernes';
+
+    return (
+      <View style={styles.gutierrezCard}>
+        {/* Cabecera */}
+        <View style={styles.gCardHeader}>
+          <View style={styles.gCardBadgeRow}>
+            <View style={styles.gEmpresaBadge}>
+              <FontAwesome name="bus" size={11} color="#0284C7" />
+              <Text style={styles.gEmpresaText}>Gutiérrez Hnos</Text>
+            </View>
+            <Text style={styles.gIdText}>#{agudosIdCorto(item.id)}</Text>
+          </View>
+
+          <View style={[styles.gDestinoBadge, getDestinoBadgeStyle('Aguilares')]}>
+            <Ionicons name="location-sharp" size={12} color={getDestinoBadgeColor('Aguilares')} />
+            <Text style={[styles.gDestinoBadgeText, { color: getDestinoBadgeColor('Aguilares') }]}>
+              Aguilares
+            </Text>
+          </View>
+        </View>
+
+        {/* Horarios principales */}
+        <View style={styles.gTimeRow}>
+          <View style={styles.gTimeCol}>
+            <Text style={styles.gTimeLabel}>{labelSalida}</Text>
+            <Text style={styles.gTimeMain}>{horaSalida}</Text>
+            <Text style={styles.gTimeSub}>{subSalida}</Text>
+          </View>
+
+          <View style={styles.gArrowCol}>
+            <Ionicons name="arrow-forward" size={18} color="#94A3B8" />
+            <Text style={styles.gDirectoText}>A Aguilares</Text>
+          </View>
+
+          <View style={[styles.gTimeCol, { alignItems: 'flex-end' }]}>
+            <Text style={styles.gTimeLabel}>Llegada Aguilares</Text>
+            <Text style={[styles.gTimeMain, { color: '#0F172A' }]}>{item.llegadaAguilares}</Text>
+            <Text style={styles.gTimeSub}>Aguilares</Text>
+          </View>
+        </View>
+
+        {/* Recorrido y tiempos de paso */}
+        <View style={styles.gTimelineContainer}>
+          <Text style={styles.gTimelineTitle}>Recorrido y tiempos de paso:</Text>
+          <View style={styles.gStopsRow}>
+            {esConcepcion ? (
+              <>
+                <View style={[styles.gStopPill, { backgroundColor: '#EFF6FF', borderColor: '#BFDBFE' }]}>
+                  <Text style={[styles.gStopName, { color: '#1D4ED8' }]}>Concepción</Text>
+                  <Text style={[styles.gStopTime, { color: '#1D4ED8' }]}>{item.salidaConcepcion}</Text>
+                </View>
+                <View style={[styles.gStopPill, { backgroundColor: '#ECFEFF', borderColor: '#A5F3FC' }]}>
+                  <Text style={[styles.gStopName, { color: '#0E7490' }]}>Aguilares</Text>
+                  <Text style={[styles.gStopTime, { color: '#0E7490' }]}>{item.llegadaAguilares}</Text>
+                </View>
+              </>
+            ) : (
+              <>
+                <View style={[styles.gStopPill, { backgroundColor: '#FEF3C7', borderColor: '#FDE68A' }]}>
+                  <Text style={[styles.gStopName, { color: '#B45309' }]}>Los Agudos</Text>
+                  <Text style={[styles.gStopTime, { color: '#B45309' }]}>{item.salidaLosAgudos}</Text>
+                </View>
+                {item.pasoEntradaMedinas && (
+                  <View style={styles.gStopPill}>
+                    <Text style={styles.gStopName}>Ent. Medinas</Text>
+                    <Text style={styles.gStopTime}>{item.pasoEntradaMedinas}</Text>
+                  </View>
+                )}
+                <View style={[styles.gStopPill, { backgroundColor: '#ECFEFF', borderColor: '#A5F3FC' }]}>
+                  <Text style={[styles.gStopName, { color: '#0E7490' }]}>Aguilares</Text>
+                  <Text style={[styles.gStopTime, { color: '#0E7490' }]}>{item.llegadaAguilares}</Text>
+                </View>
+              </>
+            )}
+          </View>
+        </View>
+
+        {/* Badges y notas */}
+        <View style={styles.gFooterRow}>
+          <View style={styles.gBadgesWrap}>
+            {esSoloLunesViernes ? (
+              <View style={[styles.gAttrBadge, styles.badgeSoloLuVi]}>
+                <Ionicons name="calendar" size={11} color="#B45309" />
+                <Text style={[styles.gAttrBadgeText, styles.badgeSoloLuViText]}>
+                  Solo Lu y Vi
+                </Text>
+              </View>
+            ) : (
+              <View style={[styles.gAttrBadge, { backgroundColor: '#F1F5F9', borderColor: '#E2E8F0' }]}>
+                <Ionicons name="calendar-outline" size={11} color="#475569" />
+                <Text style={[styles.gAttrBadgeText, { color: '#475569' }]}>Lunes a Viernes</Text>
+              </View>
+            )}
+
+            {item.badge && (
+              <View style={[styles.gAttrBadge, getDestinoBadgeStyle(item.badge)]}>
+                <Ionicons
+                  name={esConcepcion ? 'navigate-outline' : 'location-outline'}
+                  size={11}
+                  color={getDestinoBadgeColor(item.badge)}
+                />
+                <Text style={[styles.gAttrBadgeText, { color: getDestinoBadgeColor(item.badge) }]}>
+                  {item.badge}
+                </Text>
+              </View>
+            )}
+          </View>
+
+          {item.nota && <Text style={styles.gNotaText}>{item.nota}</Text>}
+        </View>
+      </View>
+    );
+  };
+
+  // Desde Aguilares (Vuelta): Salida Aguilares ➔ Paso Entrada Medinas ➔ Llegada Los Agudos (o Concepción)
+  const renderAgudosCardDesdeAguilares = (item: ServicioAgudosDesdeAguilares) => {
+    const esConcepcion = !!item.llegadaConcepcion;
+    const horaLlegada = item.llegadaConcepcion || item.llegadaLosAgudos || '';
+    const labelLlegada = esConcepcion ? 'Llegada Concepción' : 'Llegada Los Agudos';
+    const subLlegada = esConcepcion ? 'Conexión Concepción' : 'Los Agudos';
+    const esSoloLunesViernes = item.dias === 'Solo Lunes y Viernes';
+    const destinoLabel = esConcepcion ? 'Concepción' : 'Los Agudos';
+
+    return (
+      <View style={styles.gutierrezCard}>
+        {/* Cabecera */}
+        <View style={styles.gCardHeader}>
+          <View style={styles.gCardBadgeRow}>
+            <View style={styles.gEmpresaBadge}>
+              <FontAwesome name="bus" size={11} color="#0284C7" />
+              <Text style={styles.gEmpresaText}>Gutiérrez Hnos</Text>
+            </View>
+            <Text style={styles.gIdText}>#{agudosIdCorto(item.id)}</Text>
+          </View>
+
+          <View style={[styles.gDestinoBadge, getDestinoBadgeStyle(destinoLabel)]}>
+            <Ionicons name="location-sharp" size={12} color={getDestinoBadgeColor(destinoLabel)} />
+            <Text style={[styles.gDestinoBadgeText, { color: getDestinoBadgeColor(destinoLabel) }]}>
+              {destinoLabel}
+            </Text>
+          </View>
+        </View>
+
+        {/* Horarios principales */}
+        <View style={styles.gTimeRow}>
+          <View style={styles.gTimeCol}>
+            <Text style={styles.gTimeLabel}>Salida Aguilares</Text>
+            <Text style={styles.gTimeMain}>{item.salidaAguilares}</Text>
+            <Text style={styles.gTimeSub}>Aguilares</Text>
+          </View>
+
+          <View style={styles.gArrowCol}>
+            <Ionicons name="arrow-forward" size={18} color="#94A3B8" />
+            <Text style={styles.gDirectoText}>{esConcepcion ? 'A Concepción' : 'A Los Agudos'}</Text>
+          </View>
+
+          <View style={[styles.gTimeCol, { alignItems: 'flex-end' }]}>
+            <Text style={styles.gTimeLabel}>{labelLlegada}</Text>
+            <Text style={[styles.gTimeMain, { color: '#0F172A' }]}>{horaLlegada}</Text>
+            <Text style={styles.gTimeSub}>{subLlegada}</Text>
+          </View>
+        </View>
+
+        {/* Recorrido y tiempos de paso */}
+        <View style={styles.gTimelineContainer}>
+          <Text style={styles.gTimelineTitle}>Recorrido y tiempos de paso:</Text>
+          <View style={styles.gStopsRow}>
+            {esConcepcion ? (
+              <>
+                <View style={[styles.gStopPill, { backgroundColor: '#ECFEFF', borderColor: '#A5F3FC' }]}>
+                  <Text style={[styles.gStopName, { color: '#0E7490' }]}>Aguilares</Text>
+                  <Text style={[styles.gStopTime, { color: '#0E7490' }]}>{item.salidaAguilares}</Text>
+                </View>
+                <View style={[styles.gStopPill, { backgroundColor: '#EFF6FF', borderColor: '#BFDBFE' }]}>
+                  <Text style={[styles.gStopName, { color: '#1D4ED8' }]}>Concepción</Text>
+                  <Text style={[styles.gStopTime, { color: '#1D4ED8' }]}>{item.llegadaConcepcion}</Text>
+                </View>
+              </>
+            ) : (
+              <>
+                <View style={[styles.gStopPill, { backgroundColor: '#ECFEFF', borderColor: '#A5F3FC' }]}>
+                  <Text style={[styles.gStopName, { color: '#0E7490' }]}>Aguilares</Text>
+                  <Text style={[styles.gStopTime, { color: '#0E7490' }]}>{item.salidaAguilares}</Text>
+                </View>
+                {item.pasoEntradaMedinas && (
+                  <View style={styles.gStopPill}>
+                    <Text style={styles.gStopName}>Ent. Medinas</Text>
+                    <Text style={styles.gStopTime}>{item.pasoEntradaMedinas}</Text>
+                  </View>
+                )}
+                <View style={[styles.gStopPill, { backgroundColor: '#FEF3C7', borderColor: '#FDE68A' }]}>
+                  <Text style={[styles.gStopName, { color: '#B45309' }]}>Los Agudos</Text>
+                  <Text style={[styles.gStopTime, { color: '#B45309' }]}>{item.llegadaLosAgudos}</Text>
+                </View>
+              </>
+            )}
+          </View>
+        </View>
+
+        {/* Badges y notas */}
+        <View style={styles.gFooterRow}>
+          <View style={styles.gBadgesWrap}>
+            {esSoloLunesViernes ? (
+              <View style={[styles.gAttrBadge, styles.badgeSoloLuVi]}>
+                <Ionicons name="calendar" size={11} color="#B45309" />
+                <Text style={[styles.gAttrBadgeText, styles.badgeSoloLuViText]}>
+                  Solo Lu y Vi
+                </Text>
+              </View>
+            ) : (
+              <View style={[styles.gAttrBadge, { backgroundColor: '#F1F5F9', borderColor: '#E2E8F0' }]}>
+                <Ionicons name="calendar-outline" size={11} color="#475569" />
+                <Text style={[styles.gAttrBadgeText, { color: '#475569' }]}>Lunes a Viernes</Text>
+              </View>
+            )}
+
+            {item.badge && (
+              <View style={[styles.gAttrBadge, getDestinoBadgeStyle(item.badge)]}>
+                <Ionicons
+                  name={esConcepcion ? 'navigate-outline' : 'location-outline'}
+                  size={11}
+                  color={getDestinoBadgeColor(item.badge)}
+                />
+                <Text style={[styles.gAttrBadgeText, { color: getDestinoBadgeColor(item.badge) }]}>
+                  {item.badge}
+                </Text>
+              </View>
+            )}
+          </View>
+
+          {item.nota && <Text style={styles.gNotaText}>{item.nota}</Text>}
+        </View>
+      </View>
+    );
+  };
+
   // Render Component para TESA / Exprebus
   const renderItemTradicional = ({ item }: { item: Viaje }) => {
     const horaSalida = item.paradas?.[origen];
@@ -2132,7 +2458,11 @@ export default function ColectivosScreen() {
           data={viajesGutierrezFiltrados as any}
           keyExtractor={(item: any) => item.id}
           renderItem={({ item }) =>
-            ramalGutierrez === 'sarmientos'
+            ramalGutierrez === 'agudos'
+              ? direccionGutierrez === 'ida'
+                ? renderAgudosCardHaciaAguilares(item)
+                : renderAgudosCardDesdeAguilares(item)
+              : ramalGutierrez === 'sarmientos'
               ? tipoDiaGutierrez === 'domingos'
                 ? renderSarmientosCardDomingo(item)
                 : direccionGutierrez === 'ida'
@@ -2452,6 +2782,29 @@ const styles = StyleSheet.create({
   dayButtonBadgeActive: {
     color: '#E0F2FE',
   },
+  dayButtonDisabled: {
+    opacity: 0.45,
+    backgroundColor: '#F1F5F9',
+    borderColor: '#E2E8F0',
+  },
+  dayButtonTextDisabled: {
+    color: '#94A3B8',
+  },
+  dayButtonBadgeDisabled: {
+    color: '#94A3B8',
+  },
+  agudosDiaDisabledNotice: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 6,
+    paddingHorizontal: 4,
+  },
+  agudosDiaDisabledText: {
+    fontSize: 11,
+    color: '#64748B',
+    fontWeight: '500',
+  },
 
   /* SELECTOR DE DIRECCIÓN */
   directionSection: {
@@ -2536,10 +2889,11 @@ const styles = StyleSheet.create({
   },
   ramalRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 8,
   },
   ramalTab: {
-    flex: 1,
+    width: '48.5%',
     flexDirection: 'column',
     alignItems: 'center',
     justifyContent: 'center',
@@ -2583,6 +2937,26 @@ const styles = StyleSheet.create({
     lineHeight: 17,
     fontWeight: '600',
     color: '#0E7490',
+  },
+  agudosBannerAmarillo: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+    backgroundColor: '#FEF3C7',
+    borderWidth: 1,
+    borderColor: '#FDE68A',
+    borderRadius: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    marginTop: 6,
+    marginBottom: 4,
+  },
+  agudosBannerAmarilloText: {
+    flex: 1,
+    fontSize: 12,
+    lineHeight: 17,
+    fontWeight: '700',
+    color: '#92400E',
   },
 
   /* BUSCADOR RÁPIDO GUTIÉRREZ */
@@ -2893,6 +3267,14 @@ const styles = StyleSheet.create({
   gAttrBadgeText: {
     fontSize: 10,
     fontWeight: '700',
+  },
+  badgeSoloLuVi: {
+    backgroundColor: '#FEF3C7',
+    borderColor: '#FCD34D',
+  },
+  badgeSoloLuViText: {
+    color: '#B45309',
+    fontWeight: '800',
   },
   gNotaText: {
     fontSize: 11,

@@ -1,0 +1,22 @@
+{
+  "empresa": "Gutiérrez Hnos",
+  "ramal": "Los Agudos / Aguilares",
+  "linea": "Los Agudos - Entrada Medinas - Aguilares",
+  "vigencia": "Desde 27/07/2026",
+  "diasOperacion": "Lunes a Viernes (Días Hábiles)",
+  "notaConcepcion": "Vueltas a Concepción solo días lunes y viernes ida y vuelta",
+  "haciaAguilares": [
+    { "id": "ga-h-ag-1", "salidaConcepcion": null, "salidaLosAgudos": "06:00", "pasoEntradaMedinas": "06:30", "llegadaAguilares": "07:00", "dias": "Lunes a Viernes", "badge": "Los Agudos", "nota": "Servicio habitual" },
+    { "id": "ga-h-ag-2", "salidaConcepcion": null, "salidaLosAgudos": "08:00", "pasoEntradaMedinas": "08:30", "llegadaAguilares": "09:00", "dias": "Lunes a Viernes", "badge": "Los Agudos", "nota": "Servicio habitual" },
+    { "id": "ga-h-ag-3", "salidaConcepcion": "10:30", "salidaLosAgudos": null, "pasoEntradaMedinas": null, "llegadaAguilares": "11:00", "dias": "Solo Lunes y Viernes", "badge": "Desde Concepción", "nota": "Conexión directa Concepción a Aguilares" },
+    { "id": "ga-h-ag-4", "salidaConcepcion": null, "salidaLosAgudos": "12:00", "pasoEntradaMedinas": "12:30", "llegadaAguilares": "13:00", "dias": "Lunes a Viernes", "badge": "Los Agudos", "nota": "Servicio habitual" },
+    { "id": "ga-h-ag-5", "salidaConcepcion": null, "salidaLosAgudos": "17:30", "pasoEntradaMedinas": "18:00", "llegadaAguilares": "18:30", "dias": "Lunes a Viernes", "badge": "Los Agudos", "nota": "Último servicio hacia Aguilares" }
+  ],
+  "desdeAguilares": [
+    { "id": "ga-d-ag-1", "salidaAguilares": "07:00", "pasoEntradaMedinas": "07:30", "llegadaLosAgudos": "08:00", "llegadaConcepcion": null, "dias": "Lunes a Viernes", "badge": "A Los Agudos", "nota": "Servicio habitual" },
+    { "id": "ga-d-ag-2", "salidaAguilares": "09:20", "pasoEntradaMedinas": null, "llegadaLosAgudos": null, "llegadaConcepcion": "10:30", "dias": "Solo Lunes y Viernes", "badge": "A Concepción", "nota": "Conexión directa Aguilares a Concepción" },
+    { "id": "ga-d-ag-3", "salidaAguilares": "11:00", "pasoEntradaMedinas": "11:30", "llegadaLosAgudos": "12:00", "llegadaConcepcion": null, "dias": "Lunes a Viernes", "badge": "A Los Agudos", "nota": "Servicio habitual" },
+    { "id": "ga-d-ag-4", "salidaAguilares": "13:00", "pasoEntradaMedinas": "13:30", "llegadaLosAgudos": "14:00", "llegadaConcepcion": null, "dias": "Lunes a Viernes", "badge": "A Los Agudos", "nota": "Servicio habitual" },
+    { "id": "ga-d-ag-5", "salidaAguilares": "20:15", "pasoEntradaMedinas": "20:45", "llegadaLosAgudos": "21:15", "llegadaConcepcion": null, "dias": "Lunes a Viernes", "badge": "A Los Agudos", "nota": "Última vuelta (corregido de errata impresa 03:36)" }
+  ]
+}

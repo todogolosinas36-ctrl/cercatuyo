@@ -1,6 +1,7 @@
 import gutierrezData from '../data/colectivos/gutierrez.json';
 import gutierrezAlpachiriData from '../data/colectivos/gutierrez-alpachiri.json';
 import gutierrezSarmientosData from '../data/colectivos/gutierrez-sarmientos.json';
+import gutierrezAgudosData from '../data/colectivos/gutierrez-agudos.json';
 
 export type TipoDiaGutierrez = 'habiles' | 'sabados' | 'domingos';
 
@@ -50,7 +51,7 @@ export const GUTIERREZ_DATA: CuadroGutierrez = gutierrezData as unknown as Cuadr
 export default GUTIERREZ_DATA;
 
 // ===== Ramal Alpachiri / Piedra Grande =====
-export type RamalGutierrez = 'medinas' | 'alpachiri' | 'sarmientos';
+export type RamalGutierrez = 'medinas' | 'alpachiri' | 'sarmientos' | 'agudos';
 
 export interface ServicioAlpachiriIda {
   id: string;
@@ -139,3 +140,40 @@ export interface CuadroSarmientos {
 
 export const GUTIERREZ_SARMIENTOS_DATA: CuadroSarmientos =
   gutierrezSarmientosData as unknown as CuadroSarmientos;
+
+// ===== Ramal Los Agudos / Aguilares =====
+export interface ServicioAgudosHaciaAguilares {
+  id: string;
+  salidaConcepcion?: string | null;
+  salidaLosAgudos?: string | null;
+  pasoEntradaMedinas?: string | null;
+  llegadaAguilares: string;
+  dias: string;
+  badge: string;
+  nota: string;
+}
+
+export interface ServicioAgudosDesdeAguilares {
+  id: string;
+  salidaAguilares: string;
+  pasoEntradaMedinas?: string | null;
+  llegadaLosAgudos?: string | null;
+  llegadaConcepcion?: string | null;
+  dias: string;
+  badge: string;
+  nota: string;
+}
+
+export interface CuadroAgudos {
+  empresa: string;
+  ramal: string;
+  linea: string;
+  vigencia: string;
+  diasOperacion: string;
+  notaConcepcion: string;
+  haciaAguilares: ServicioAgudosHaciaAguilares[];
+  desdeAguilares: ServicioAgudosDesdeAguilares[];
+}
+
+export const GUTIERREZ_AGUDOS_DATA: CuadroAgudos =
+  gutierrezAgudosData as unknown as CuadroAgudos;
