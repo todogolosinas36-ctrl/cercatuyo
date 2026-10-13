@@ -56,24 +56,25 @@ function formatearTelefonoVisual(telefono?: string): string {
 }
 
 export default function FarmaciasScreen() {
-  const [isMounted, setIsMounted] = useState<boolean>(false);
+  const [mounted, setMounted] = useState<boolean>(false);
   const [localidadSeleccionada, setLocalidadSeleccionada] = useState<string>('Aguilares');
   const [busqueda, setBusqueda] = useState<string>('');
-
-  useEffect(() => {
-    setIsMounted(true);
-  }, []);
+  const [textoFechaTurno, setTextoFechaTurno] = useState<string>('');
+  const [desactualizado, setDesactualizado] = useState<boolean>(false);
 
   // Estado local para los datos de farmacias (iniciado con el fallback local estático)
   const [farmaciasData, setFarmaciasData] = useState<any>(farmaciasFallback);
   const [refreshing, setRefreshing] = useState<boolean>(false);
   const [origenRemoto, setOrigenRemoto] = useState<boolean>(false);
 
-  // Verificación de si los datos mostrados corresponden al turno vigente
-  const desactualizado = farmaciasData?.fecha !== fechaTurnoVigente();
-
-  // Fecha del sistema
-  const fechaHoy = useMemo(() => new Date(), []);
+  useEffect(() => {
+    setMounted(true);
+    const fechaTexto = farmaciasData?.fecha
+      ? formatearFechaTurno(farmaciasData.fecha)
+      : formatearFechaAmigable(new Date());
+    setTextoFechaTurno(fechaTexto);
+    setDesactualizado(farmaciasData?.fecha !== fechaTurnoVigente());
+  }, [farmaciasData?.fecha]);
 
   // Función asíncrona para consultar el archivo directo desde GitHub Raw
   const cargarFarmacias = async () => {
@@ -294,11 +295,7 @@ export default function FarmaciasScreen() {
           <View style={{ flex: 1 }}>
             <Text style={styles.dateLabel}>Turno correspondiente al</Text>
             <Text style={styles.dateText}>
-              {isMounted
-                ? (farmaciasData?.fecha
-                    ? formatearFechaTurno(farmaciasData.fecha)
-                    : formatearFechaAmigable(fechaHoy))
-                : ''}
+              {mounted ? textoFechaTurno : ''}
             </Text>
           </View>
 
@@ -395,7 +392,7 @@ export default function FarmaciasScreen() {
         </View>
 
         {/* BANNER DE ADVERTENCIA SI EL TURNO ESTÁ DESACTUALIZADO */}
-        {isMounted && desactualizado && (
+        {mounted && desactualizado && (
           <View style={styles.bannerDesactualizado}>
             <Ionicons name="warning" size={20} color="#D97706" style={{ marginTop: 1 }} />
             <Text style={styles.bannerDesactualizadoText}>

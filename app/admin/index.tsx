@@ -13,10 +13,10 @@ import { useOficios } from '@/context/OficiosContext';
 
 export default function AdminDashboardScreen() {
   const { trabajadores, categorias } = useOficios();
-  const [isMounted, setIsMounted] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    setIsMounted(true);
+    setMounted(true);
   }, []);
 
   const handleFarmaciasPress = () => {
@@ -30,7 +30,7 @@ export default function AdminDashboardScreen() {
   const handleConfiguracionPress = () => {
     Alert.alert(
       'Configuración General',
-      'Parámetros activos de CercaTuyo:\n\n• Entorno: Desarrollo Local / Expo\n• Fuente de Turnos: GitHub Raw JSON (COFATUC)\n• Ciudades habilitadas: Aguilares, Concepción, Monteros, San Miguel de Tucumán\n• Versión del Panel: 1.0.0',
+      'Parámetros activos de CercaTuyo:\n\n• Entorno: Desarrollo Local / Expo\n• Analítica: Google Analytics 4 (G-4WBQH176B9 activo)\n• Fuente de Turnos: GitHub Raw JSON (COFATUC)\n• Ciudades habilitadas: Aguilares, Concepción, Monteros, San Miguel de Tucumán\n• Versión del Panel: 1.0.0',
       [{ text: 'Aceptar', style: 'default' }]
     );
   };
@@ -57,10 +57,10 @@ export default function AdminDashboardScreen() {
       {/* SECCIÓN DE MÉTRICAS / ANALYTICS */}
       <View style={styles.sectionHeader}>
         <Ionicons name="stats-chart" size={18} color="#1E3A8A" />
-        <Text style={styles.sectionTitle}>Métricas (Próximamente con Analytics)</Text>
+        <Text style={styles.sectionTitle}>Métricas y Analítica Web</Text>
       </View>
       <Text style={styles.sectionSubtitle}>
-        Datos de tráfico estimados (preparado para integración con Google Analytics o Plausible)
+        Medición oficial de tráfico en producción conectada a Google Analytics 4 (GA4)
       </Text>
 
       <View style={styles.metricsGrid}>
@@ -70,14 +70,14 @@ export default function AdminDashboardScreen() {
             <View style={[styles.metricIconBox, { backgroundColor: '#EFF6FF' }]}>
               <Ionicons name="eye" size={20} color="#2563EB" />
             </View>
-            <View style={styles.pendingBadge}>
-              <Ionicons name="time-outline" size={12} color="#D97706" />
-              <Text style={styles.pendingBadgeText}>Próximamente</Text>
+            <View style={styles.activeBadge}>
+              <View style={styles.pulseDotGreen} />
+              <Text style={styles.activeBadgeText}>Activo</Text>
             </View>
           </View>
-          <Text style={styles.metricValue}>Integración pendiente</Text>
-          <Text style={styles.metricLabel}>Visitas totales</Text>
-          <Text style={styles.metricDetail}>Sin costo de base de datos</Text>
+          <Text style={styles.metricValue}>En tiempo real</Text>
+          <Text style={styles.metricLabel}>Visitas y Eventos</Text>
+          <Text style={styles.metricDetail}>gtag.js en producción</Text>
         </View>
 
         {/* TARJETA 2: USUARIOS ACTIVOS */}
@@ -86,26 +86,31 @@ export default function AdminDashboardScreen() {
             <View style={[styles.metricIconBox, { backgroundColor: '#ECFDF5' }]}>
               <Ionicons name="people" size={20} color="#059669" />
             </View>
-            <View style={styles.pendingBadge}>
-              <Ionicons name="time-outline" size={12} color="#D97706" />
-              <Text style={styles.pendingBadgeText}>Próximamente</Text>
+            <View style={styles.activeBadge}>
+              <View style={styles.pulseDotGreen} />
+              <Text style={styles.activeBadgeText}>En vivo</Text>
             </View>
           </View>
-          <Text style={styles.metricValue}>Integración pendiente</Text>
+          <Text style={styles.metricValue}>Consola GA4</Text>
           <Text style={styles.metricLabel}>Usuarios activos</Text>
-          <Text style={styles.metricDetail}>Sin costo de base de datos</Text>
+          <Text style={styles.metricDetail}>Propiedad G-4WBQH176B9</Text>
         </View>
       </View>
 
-      {/* TARJETA RECOMENDACIÓN ANALYTICS (B-12) */}
+      {/* TARJETA INFORMATIVA ANALYTICS */}
       <View style={styles.analyticsNoticeCard}>
         <View style={styles.analyticsIconBox}>
-          <Ionicons name="analytics" size={24} color="#2563EB" />
+          <Ionicons name="analytics" size={22} color="#047857" />
         </View>
         <View style={{ flex: 1 }}>
-          <Text style={styles.analyticsTitle}>Analítica Web Externa Recomendada</Text>
+          <View style={styles.analyticsHeaderRow}>
+            <Text style={styles.analyticsTitle}>Google Analytics 4 Conectado</Text>
+            <View style={styles.propertyBadge}>
+              <Text style={styles.propertyBadgeText}>G-4WBQH176B9</Text>
+            </View>
+          </View>
           <Text style={styles.analyticsText}>
-            Para medir visitas reales sin consumir operaciones de lectura y escritura en Firebase, se sugiere integrar un script de analítica (como Plausible, Umami o Google Analytics) directamente en app/+html.tsx.
+            La propiedad oficial de GA4 está activa en producción (+html.tsx). El script oficial gtag.js registra automáticamente visitas, páginas y eventos de usuarios sin consumir lecturas de la base de datos.
           </Text>
         </View>
       </View>
@@ -115,7 +120,7 @@ export default function AdminDashboardScreen() {
         <View style={styles.summaryItem}>
           <Ionicons name="hammer-outline" size={16} color="#64748B" />
           <Text style={styles.summaryText}>
-            <Text style={styles.summaryBold}>{trabajadores.length}</Text> Trabajadores cargados
+            <Text style={styles.summaryBold}>{mounted ? trabajadores.length : 0}</Text> Trabajadores cargados
           </Text>
         </View>
         <View style={styles.summaryDivider} />
@@ -336,6 +341,28 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  activeBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: '#ECFDF5',
+    paddingVertical: 3,
+    paddingHorizontal: 8,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#A7F3D0',
+  },
+  activeBadgeText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#059669',
+  },
+  pulseDotGreen: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#10B981',
+  },
   pendingBadge: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -353,25 +380,25 @@ const styles = StyleSheet.create({
   metricValue: {
     fontSize: 14,
     fontWeight: '800',
-    color: '#64748B',
+    color: '#0F172A',
     marginBottom: 4,
   },
   metricLabel: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#0F172A',
+    color: '#334155',
   },
   metricDetail: {
     fontSize: 11,
-    color: '#94A3B8',
+    color: '#64748B',
     marginTop: 2,
   },
   analyticsNoticeCard: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    backgroundColor: '#EFF6FF',
+    backgroundColor: '#F0FDF4',
     borderWidth: 1,
-    borderColor: '#BFDBFE',
+    borderColor: '#BBF7D0',
     borderRadius: 16,
     padding: 16,
     gap: 12,
@@ -381,20 +408,41 @@ const styles = StyleSheet.create({
     width: 42,
     height: 42,
     borderRadius: 12,
-    backgroundColor: '#DBEAFE',
+    backgroundColor: '#DCFCE7',
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  analyticsHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    flexWrap: 'wrap',
+    gap: 6,
+    marginBottom: 4,
   },
   analyticsTitle: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#1E3A8A',
-    marginBottom: 4,
+    color: '#065F46',
   },
   analyticsText: {
     fontSize: 12,
-    color: '#3B82F6',
+    color: '#15803D',
     lineHeight: 18,
+  },
+  propertyBadge: {
+    backgroundColor: '#DCFCE7',
+    paddingVertical: 2,
+    paddingHorizontal: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#86EFAC',
+  },
+  propertyBadgeText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#065F46',
+    letterSpacing: 0.5,
   },
   summaryBar: {
     flexDirection: 'row',

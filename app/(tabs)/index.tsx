@@ -62,14 +62,13 @@ const CATEGORIAS_DESTACADAS = [
 
 export default function HomeDashboardScreen() {
   const { trabajadores } = useOficios();
-  const [isMounted, setIsMounted] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  const [fechaHoy, setFechaHoy] = useState('');
 
   useEffect(() => {
-    setIsMounted(true);
+    setMounted(true);
+    setFechaHoy(obtenerFechaHoy());
   }, []);
-
-  // Fecha de hoy
-  const fechaHoy = useMemo(() => obtenerFechaHoy(), []);
 
   return (
     <ScrollView
@@ -87,7 +86,7 @@ export default function HomeDashboardScreen() {
         <Text style={styles.greetingTitle}>
           Bienvenido a <Text style={styles.greetingBrand}>CercaTuyo</Text>
         </Text>
-        <Text style={styles.greetingDate}>{isMounted ? fechaHoy : ''}</Text>
+        <Text style={styles.greetingDate}>{mounted ? fechaHoy : ''}</Text>
         <Text style={styles.greetingSubtitle}>
           Tu punto de encuentro con farmacias de guardia, transporte y trabajadores de confianza.
         </Text>

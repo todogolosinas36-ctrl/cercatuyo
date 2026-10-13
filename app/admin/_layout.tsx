@@ -17,6 +17,7 @@ import { onAuthStateChanged, signInWithEmailAndPassword, signOut } from 'firebas
 import { auth } from '../../config/firebase';
 
 export default function AdminLayout() {
+  const [mounted, setMounted] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [loadingAuth, setLoadingAuth] = useState(true);
 
@@ -29,6 +30,7 @@ export default function AdminLayout() {
 
   // Escuchamos el estado de la sesión en tiempo real con Firebase Auth
   useEffect(() => {
+    setMounted(true);
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setIsAuthenticated(!!user);
       setLoadingAuth(false);
@@ -83,7 +85,7 @@ export default function AdminLayout() {
   };
 
   // Pantalla de carga inicial mientras se verifica la sesión
-  if (loadingAuth) {
+  if (!mounted || loadingAuth) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#2563EB" />

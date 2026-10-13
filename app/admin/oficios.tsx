@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -46,6 +46,7 @@ function confirmarAccion(titulo: string, mensaje: string, alConfirmar: () => voi
 export default function AdminOficiosScreen() {
   const { trabajadores, categorias, agregarTrabajador, eliminarTrabajador, limpiarMemoria, restaurarPrueba } = useOficios();
 
+  const [mounted, setMounted] = useState(false);
   const [nombre, setNombre] = useState('');
   const [telefono, setTelefono] = useState('');
   const [descripcion, setDescripcion] = useState('');
@@ -61,7 +62,14 @@ export default function AdminOficiosScreen() {
   const [modalCiudadVisible, setModalCiudadVisible] = useState(false);
   const [modalCategoriaVisible, setModalCategoriaVisible] = useState(false);
 
+  useEffect(() => {
+    setMounted(true);
+    setGuardando(false);
+    setRestaurando(false);
+  }, []);
+
   const handleSave = async () => {
+    console.log('Click detectado en Guardar');
     console.log('>>> Botón presionado: handleSave');
 
     if (!nombre.trim()) {
@@ -148,6 +156,7 @@ export default function AdminOficiosScreen() {
   };
 
   const handleRestore = async () => {
+    console.log('Click detectado en Restaurar');
     console.log('>>> Botón presionado: handleRestore');
     setRestaurando(true);
 
@@ -163,6 +172,7 @@ export default function AdminOficiosScreen() {
   };
 
   const handleClear = () => {
+    console.log('Click detectado en Limpiar');
     console.log('>>> Botón presionado: handleClear');
     confirmarAccion('¡Atención!', '¿Estás seguro de que deseas borrar todos los trabajadores guardados?', () => {
       try {
@@ -176,6 +186,7 @@ export default function AdminOficiosScreen() {
   };
 
   const handleEliminar = (id: string) => {
+    console.log('Click detectado en Eliminar', id);
     console.log('>>> Botón presionado: handleEliminar', id);
     confirmarAccion('Eliminar Trabajador', '¿Deseas eliminar este trabajador?', async () => {
       try {
@@ -192,6 +203,18 @@ export default function AdminOficiosScreen() {
     const cat = categorias.find((c) => c.id === id);
     return cat ? cat.nombre : 'Seleccionar categoría...';
   };
+
+  // Durante la primera hidratación del servidor o cliente, renderizar el placeholder para evitar error #418
+  if (!mounted) {
+    return (
+      <View style={styles.screenWrapper}>
+        <Stack.Screen options={{ title: 'Gestión de Oficios' }} />
+        <View style={styles.loadingWrapper}>
+          <ActivityIndicator size="large" color="#1E3A8A" />
+        </View>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.screenWrapper}>
@@ -271,7 +294,7 @@ export default function AdminOficiosScreen() {
             style={[styles.btnGuardar, guardando && { opacity: 0.7 }]}
             onPress={handleSave}
             disabled={guardando}
-            activeOpacity={0.85}
+            activeOpacity={0.8}
           >
             {guardando ? (
               <ActivityIndicator size="small" color="#FFFFFF" />
@@ -314,8 +337,8 @@ export default function AdminOficiosScreen() {
           <TouchableOpacity
             style={[styles.btnRestaurar, restaurando && { opacity: 0.7 }]}
             onPress={handleRestore}
-            disabled={guardando || restaurando}
-            activeOpacity={0.85}
+            disabled={restaurando}
+            activeOpacity={0.8}
           >
             {restaurando ? (
               <ActivityIndicator size="small" color="#FFFFFF" />
@@ -327,8 +350,7 @@ export default function AdminOficiosScreen() {
           <TouchableOpacity
             style={styles.btnLimpiar}
             onPress={handleClear}
-            disabled={guardando || restaurando}
-            activeOpacity={0.85}
+            activeOpacity={0.8}
           >
             <Text style={styles.btnAccionText}>Limpiar Memoria</Text>
           </TouchableOpacity>
@@ -420,6 +442,12 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f4f4f5',
   },
+  loadingWrapper: {
+    flex: 1,
+    minHeight: 400,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   container: {
     flex: 1,
   },
@@ -469,7 +497,12 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     alignItems: 'center',
     marginTop: 8,
-    cursor: Platform.OS === 'web' ? ('pointer' as any) : undefined,
+    ...Platform.select({
+      web: {
+        cursor: 'pointer',
+        userSelect: 'none',
+      },
+    }),
   },
   btnText: { color: 'white', fontWeight: 'bold', fontSize: 16 },
   card: {
@@ -492,7 +525,11 @@ const styles = StyleSheet.create({
     backgroundColor: '#ef4444',
     padding: 10,
     borderRadius: 8,
-    cursor: Platform.OS === 'web' ? ('pointer' as any) : undefined,
+    ...Platform.select({
+      web: {
+        cursor: 'pointer',
+      },
+    }),
   },
   emptyContainer: {
     backgroundColor: 'white',
@@ -531,7 +568,12 @@ const styles = StyleSheet.create({
     flex: 0.48,
     alignItems: 'center',
     justifyContent: 'center',
-    cursor: Platform.OS === 'web' ? ('pointer' as any) : undefined,
+    ...Platform.select({
+      web: {
+        cursor: 'pointer',
+        userSelect: 'none',
+      },
+    }),
   },
   btnLimpiar: {
     backgroundColor: '#ef4444',
@@ -540,7 +582,12 @@ const styles = StyleSheet.create({
     flex: 0.48,
     alignItems: 'center',
     justifyContent: 'center',
-    cursor: Platform.OS === 'web' ? ('pointer' as any) : undefined,
+    ...Platform.select({
+      web: {
+        cursor: 'pointer',
+        userSelect: 'none',
+      },
+    }),
   },
   btnAccionText: {
     color: 'white',
