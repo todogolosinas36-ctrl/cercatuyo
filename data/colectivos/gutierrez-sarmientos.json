@@ -1,0 +1,68 @@
+{
+  "empresa": "Gutiérrez",
+  "ramal": "Aguilares / Los Sarmientos / Monte Bello",
+  "linea": "Concepción - Aguilares - Los Sarmientos - Monte Bello",
+  "vigencia": "Desde 27/07/2026",
+  "habiles": {
+    "ida": [
+      { "id": "gs-h-i-1", "salidaColonItalia": "06:00", "salidaTerminalConcep": "06:15", "pasoAguilares": "06:35 T.A", "llegadaSarmientos": "06:50", "llegadaMonteBello": "07:05", "badge": "Terminal Aguilares", "nota": "Pasa por Terminal Aguilares" },
+      { "id": "gs-h-i-2", "salidaColonItalia": "06:20", "salidaTerminalConcep": "06:35", "pasoAguilares": "07:00", "llegadaSarmientos": "07:10", "llegadaMonteBello": null, "badge": "Hasta Sarmientos", "nota": "Termina en Los Sarmientos" },
+      { "id": "gs-h-i-3", "salidaColonItalia": null, "salidaTerminalConcep": null, "pasoAguilares": "07:25 T", "llegadaSarmientos": "07:40", "llegadaMonteBello": "08:00", "badge": "Sale Aguilares", "nota": "Inicia en Terminal Aguilares" },
+      { "id": "gs-h-i-4", "salidaColonItalia": "08:30", "salidaTerminalConcep": "08:45", "pasoAguilares": "09:05", "llegadaSarmientos": "09:20", "llegadaMonteBello": "09:40", "badge": "Completo", "nota": null },
+      { "id": "gs-h-i-5", "salidaColonItalia": "09:30", "salidaTerminalConcep": "09:50", "pasoAguilares": "10:05", "llegadaSarmientos": "10:20", "llegadaMonteBello": "10:40", "badge": "Completo", "nota": null },
+      { "id": "gs-h-i-6", "salidaColonItalia": "10:30", "salidaTerminalConcep": "10:45", "pasoAguilares": "11:15 T", "llegadaSarmientos": "11:30", "llegadaMonteBello": "11:50", "badge": "Terminal Aguilares", "nota": "Pasa por Terminal Aguilares" },
+      { "id": "gs-h-i-7", "salidaColonItalia": "11:40", "salidaTerminalConcep": "11:55", "pasoAguilares": "12:20", "llegadaSarmientos": "12:35", "llegadaMonteBello": "12:55", "badge": "Completo", "nota": null },
+      { "id": "gs-h-i-8", "salidaColonItalia": null, "salidaTerminalConcep": null, "pasoAguilares": "12:35 T", "llegadaSarmientos": "12:50", "llegadaMonteBello": "13:10", "badge": "Sale Aguilares", "nota": "Inicia en Terminal Aguilares" },
+      { "id": "gs-h-i-9", "salidaColonItalia": "13:05", "salidaTerminalConcep": "13:15", "pasoAguilares": "13:40", "llegadaSarmientos": "13:55", "llegadaMonteBello": "14:15", "badge": "Completo", "nota": null },
+      { "id": "gs-h-i-10", "salidaColonItalia": "16:20", "salidaTerminalConcep": "16:35", "pasoAguilares": "16:55 T", "llegadaSarmientos": "17:10", "llegadaMonteBello": "17:30", "badge": "Terminal Aguilares", "nota": "Pasa por Terminal Aguilares" },
+      { "id": "gs-h-i-11", "salidaColonItalia": "18:00", "salidaTerminalConcep": "18:15", "pasoAguilares": "18:35", "llegadaSarmientos": "18:55", "llegadaMonteBello": "19:10", "badge": "Completo", "nota": null },
+      { "id": "gs-h-i-12", "salidaColonItalia": "19:40", "salidaTerminalConcep": "19:55", "pasoAguilares": "20:15", "llegadaSarmientos": "20:30", "llegadaMonteBello": "20:50", "badge": "Completo", "nota": null },
+      { "id": "gs-h-i-13", "salidaColonItalia": "20:35", "salidaTerminalConcep": "20:50", "pasoAguilares": "21:10", "llegadaSarmientos": "21:25", "llegadaMonteBello": "21:40", "badge": "Completo", "nota": null },
+      { "id": "gs-h-i-14", "salidaColonItalia": "21:35", "salidaTerminalConcep": "21:50", "pasoAguilares": "22:15", "llegadaSarmientos": "22:30", "llegadaMonteBello": "22:45", "badge": "Completo", "nota": null },
+      { "id": "gs-h-i-15", "salidaColonItalia": "22:40", "salidaTerminalConcep": "22:55", "pasoAguilares": "23:10", "llegadaSarmientos": "23:30", "llegadaMonteBello": "23:45", "badge": "Último", "nota": "Último servicio de ida" }
+    ],
+    "vuelta": [
+      { "id": "gs-h-v-1", "salidaMonteBello": "07:10", "salidaSarmientos": "07:30", "salidaAguilares": "07:45", "llegadaConcepcion": "08:05", "badge": "Colón e Italia", "nota": "Llega a Colón e Italia" },
+      { "id": "gs-h-v-2", "salidaMonteBello": null, "salidaSarmientos": "07:15", "salidaAguilares": "07:30", "llegadaConcepcion": null, "badge": "Hasta Aguilares", "nota": "Termina en Aguilares" },
+      { "id": "gs-h-v-3", "salidaMonteBello": "08:20", "salidaSarmientos": "08:40", "salidaAguilares": "08:55", "llegadaConcepcion": "09:20", "badge": "Colón e Italia", "nota": "Llega a Colón e Italia" },
+      { "id": "gs-h-v-4", "salidaMonteBello": "09:40", "salidaSarmientos": "10:00", "salidaAguilares": "10:15", "llegadaConcepcion": "10:35 T.C", "badge": "A Terminal Concep.", "nota": "Llega a Terminal Concepción" },
+      { "id": "gs-h-v-5", "salidaMonteBello": "10:40", "salidaSarmientos": "11:00", "salidaAguilares": "11:15", "llegadaConcepcion": "11:20 T.C", "badge": "A Terminal Concep.", "nota": "Llega a Terminal Concepción" },
+      { "id": "gs-h-v-6", "salidaMonteBello": "12:00", "salidaSarmientos": "12:20", "salidaAguilares": "12:35 T", "llegadaConcepcion": null, "badge": "Termina en Aguilares", "nota": "Termina en Terminal Aguilares" },
+      { "id": "gs-h-v-7", "salidaMonteBello": "13:00", "salidaSarmientos": "13:20", "salidaAguilares": "13:35", "llegadaConcepcion": "13:55 T.C", "badge": "A Terminal Concep.", "nota": "Llega a Terminal Concepción" },
+      { "id": "gs-h-v-8", "salidaMonteBello": "13:15", "salidaSarmientos": "13:30", "salidaAguilares": "13:45", "llegadaConcepcion": "14:10 B.M", "badge": "Benjamín Matienzo", "nota": "Servicio escolar a Esc. Matienzo" },
+      { "id": "gs-h-v-9", "salidaMonteBello": "14:30", "salidaSarmientos": "14:45", "salidaAguilares": "15:00", "llegadaConcepcion": "15:20 B.M", "badge": "Benjamín Matienzo", "nota": "Servicio escolar a Esc. Matienzo" },
+      { "id": "gs-h-v-10", "salidaMonteBello": "15:30", "salidaSarmientos": "15:45", "salidaAguilares": "16:05", "llegadaConcepcion": "16:20", "badge": "Colón e Italia", "nota": "Llega a Colón e Italia" },
+      { "id": "gs-h-v-11", "salidaMonteBello": "16:25", "salidaSarmientos": "16:45", "salidaAguilares": "17:05", "llegadaConcepcion": "17:20 T.C", "badge": "A Terminal Concep.", "nota": "Llega a Terminal Concepción" },
+      { "id": "gs-h-v-12", "salidaMonteBello": "17:35", "salidaSarmientos": "17:55", "salidaAguilares": "18:10", "llegadaConcepcion": "18:30 T.C", "badge": "A Terminal Concep.", "nota": "Llega a Terminal Concepción" },
+      { "id": "gs-h-v-13", "salidaMonteBello": "19:20", "salidaSarmientos": "19:40", "salidaAguilares": "19:55", "llegadaConcepcion": "20:10 T.C", "badge": "A Terminal Concep.", "nota": "Llega a Terminal Concepción" },
+      { "id": "gs-h-v-14", "salidaMonteBello": "20:50", "salidaSarmientos": "21:05", "salidaAguilares": "21:20", "llegadaConcepcion": "21:40", "badge": "Colón e Italia", "nota": "Llega a Colón e Italia" },
+      { "id": "gs-h-v-15", "salidaMonteBello": "21:45", "salidaSarmientos": "22:00", "salidaAguilares": "22:15", "llegadaConcepcion": "22:30", "badge": "Último", "nota": "Último servicio de vuelta" }
+    ]
+  },
+  "sabados": {
+    "ida": [
+      { "id": "gs-s-i-1", "salidaColonItalia": "07:50", "salidaTerminalConcep": "08:05", "pasoAguilares": "08:20", "llegadaSarmientos": "08:35", "llegadaMonteBello": "08:50", "badge": "Mañana", "nota": null },
+      { "id": "gs-s-i-2", "salidaColonItalia": null, "salidaTerminalConcep": null, "pasoAguilares": "10:15", "llegadaSarmientos": "10:30", "llegadaMonteBello": "10:45", "badge": "Sale Aguilares", "nota": "Inicia en Aguilares" },
+      { "id": "gs-s-i-3", "salidaColonItalia": "12:10", "salidaTerminalConcep": "12:25", "pasoAguilares": "12:40", "llegadaSarmientos": "12:55", "llegadaMonteBello": "13:10", "badge": "Mediodía", "nota": null },
+      { "id": "gs-s-i-4", "salidaColonItalia": "16:20", "salidaTerminalConcep": "16:35", "pasoAguilares": "16:55 T", "llegadaSarmientos": "17:10", "llegadaMonteBello": "17:25", "badge": "Terminal Aguilares", "nota": "Pasa por Terminal Aguilares" },
+      { "id": "gs-s-i-5", "salidaColonItalia": "19:50", "salidaTerminalConcep": "20:05", "pasoAguilares": "20:20", "llegadaSarmientos": "20:35", "llegadaMonteBello": "20:50", "badge": "Noche", "nota": "Último servicio del sábado" }
+    ],
+    "vuelta": [
+      { "id": "gs-s-v-1", "salidaMonteBello": "08:10", "salidaSarmientos": "08:25", "salidaAguilares": "08:40", "llegadaConcepcion": "09:00", "badge": "A Concepción", "nota": "Hasta Concepción Centro" },
+      { "id": "gs-s-v-2", "salidaMonteBello": "09:40", "salidaSarmientos": "09:55", "salidaAguilares": "10:15", "llegadaConcepcion": null, "badge": "Hasta Aguilares", "nota": "Termina en Aguilares" },
+      { "id": "gs-s-v-3", "salidaMonteBello": "10:45", "salidaSarmientos": "11:00", "salidaAguilares": "11:15", "llegadaConcepcion": "11:30 T.C", "badge": "A Terminal Concep.", "nota": "Hasta Terminal Concepción" },
+      { "id": "gs-s-v-4", "salidaMonteBello": "16:30", "salidaSarmientos": "16:45", "salidaAguilares": "17:05", "llegadaConcepcion": "17:20", "badge": "A Concepción", "nota": "Hasta Concepción Centro" },
+      { "id": "gs-s-v-5", "salidaMonteBello": "17:30", "salidaSarmientos": "17:45", "salidaAguilares": "18:05", "llegadaConcepcion": "18:25", "badge": "Último", "nota": "Última vuelta del sábado" }
+    ]
+  },
+  "domingos": {
+    "ida": [
+      { "id": "gs-d-i-1", "salidaAguilares": "10:05", "llegadaSarmientos": "10:20", "llegadaMonteBello": "10:40", "badge": "Lanzadera Local", "nota": "Sale de Aguilares a Monte Bello" },
+      { "id": "gs-d-i-2", "salidaAguilares": "12:35", "llegadaSarmientos": "12:50", "llegadaMonteBello": "13:10", "badge": "Lanzadera Local", "nota": "Sale de Aguilares a Monte Bello" }
+    ],
+    "vuelta": [
+      { "id": "gs-d-v-1", "salidaMonteBello": "08:10", "llegadaSarmientos": "08:30", "llegadaAguilares": "08:45", "badge": "A Aguilares", "nota": "Termina en Aguilares" },
+      { "id": "gs-d-v-2", "salidaMonteBello": "12:00", "llegadaSarmientos": "12:20", "llegadaAguilares": "12:35", "badge": "A Aguilares", "nota": "Termina en Aguilares" }
+    ]
+  }
+}
