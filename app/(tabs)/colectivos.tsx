@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   StyleSheet,
   Text,
@@ -8,11 +8,21 @@ import {
   Platform,
   Modal,
   Pressable,
+  TextInput,
+  ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { FontAwesome } from '@expo/vector-icons';
+import { FontAwesome, Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { TODOS_LOS_VIAJES, PRECIOS_TESA, Viaje } from '@/data/horarios';
+import {
+  GUTIERREZ_DATA,
+  ServicioGutierrezIda,
+  ServicioGutierrezVuelta,
+} from '@/constants/gutierrez';
+
+type EmpresaTipo = 'TESA' | 'Exprebus' | 'Gutierrez';
+type DireccionGutierrez = 'ida' | 'vuelta';
 
 const CIUDADES = [
   'Tucumán',
@@ -38,6 +48,12 @@ const CIUDADES = [
 
 const TIPOS_DIA = ['Lunes a Viernes', 'Sábados', 'Domingos/Feriados'];
 
+const EMPRESAS: { id: EmpresaTipo; label: string }[] = [
+  { id: 'TESA', label: 'TESA' },
+  { id: 'Exprebus', label: 'Exprebus' },
+  { id: 'Gutierrez', label: 'Gutiérrez (Interurbano)' },
+];
+
 // Función auxiliar para calcular duración estimada entre dos horas formato HH:mm
 function calcularDuracion(horaSalida: string, horaLlegada: string): string {
   const [h1, m1] = horaSalida.split(':').map(Number);
@@ -52,22 +68,129 @@ function calcularDuracion(horaSalida: string, horaLlegada: string): string {
   return `${horas}h ${minutos}m`;
 }
 
-// Función auxiliar para consultar tarifa
+// Función auxiliar para consultar tarifa TESA
 function obtenerPrecio(origen: string, destino: string): string {
   const rutaDirecta = `${origen}-${destino}`;
   const rutaInversa = `${destino}-${origen}`;
   return PRECIOS_TESA[rutaDirecta] || PRECIOS_TESA[rutaInversa] || 'Consultar';
 }
 
+// Helpers visuales para badges de destino de Gutiérrez
+function getDestinoBadgeStyle(destino?: string | null) {
+  if (!destino) return { backgroundColor: '#F1F5F9', borderColor: '#E2E8F0' };
+  const d = destino.toLowerCase();
+  if (d.includes('matienzo') || d.includes('b.m.')) {
+    return { backgroundColor: '#EFF6FF', borderColor: '#BFDBFE' };
+  }
+  if (d.includes('francia')) {
+    return { backgroundColor: '#EEF2FF', borderColor: '#C7D2FE' };
+  }
+  if (d.includes('shipton')) {
+    return { backgroundColor: '#FAF5FF', borderColor: '#E9D5FF' };
+  }
+  if (d.includes('cristo rey') || d.includes('c.c.rey')) {
+    return { backgroundColor: '#ECFDF5', borderColor: '#A7F3D0' };
+  }
+  if (d.includes('santa rita') || d.includes('sta. rita')) {
+    return { backgroundColor: '#F5F3FF', borderColor: '#DDD6FE' };
+  }
+  if (d.includes('san carlos') || d.includes('s.c.')) {
+    return { backgroundColor: '#FFFBEB', borderColor: '#FDE68A' };
+  }
+  if (d.includes('terminal')) {
+    return { backgroundColor: '#ECFDF5', borderColor: '#BBF7D0' };
+  }
+  if (d.includes('taller')) {
+    return { backgroundColor: '#F1F5F9', borderColor: '#CBD5E1' };
+  }
+  if (d.includes('monteagudo')) {
+    return { backgroundColor: '#F0F9FF', borderColor: '#BAE6FD' };
+  }
+  if (d.includes('medinas')) {
+    return { backgroundColor: '#F0FDFA', borderColor: '#99F6E4' };
+  }
+  return { backgroundColor: '#F8FAFC', borderColor: '#E2E8F0' };
+}
+
+function getDestinoBadgeColor(destino?: string | null) {
+  if (!destino) return '#475569';
+  const d = destino.toLowerCase();
+  if (d.includes('matienzo') || d.includes('b.m.')) return '#1D4ED8';
+  if (d.includes('francia')) return '#4338CA';
+  if (d.includes('shipton')) return '#7E22CE';
+  if (d.includes('cristo rey') || d.includes('c.c.rey')) return '#047857';
+  if (d.includes('santa rita') || d.includes('sta. rita')) return '#6D28D9';
+  if (d.includes('san carlos') || d.includes('s.c.')) return '#B45309';
+  if (d.includes('terminal')) return '#059669';
+  if (d.includes('taller')) return '#475569';
+  if (d.includes('monteagudo')) return '#0284C7';
+  if (d.includes('medinas')) return '#0F766E';
+  return '#334155';
+}
+
 export default function ColectivosScreen() {
+  const [isMounted, setIsMounted] = useState(false);
+
+  // Selector de Empresa Activa
+  const [empresaSeleccionada, setEmpresaSeleccionada] = useState<EmpresaTipo>('TESA');
+
+  // Estados para TESA / Exprebus
   const [origen, setOrigen] = useState('Tucumán');
   const [destino, setDestino] = useState('Concepción');
   const [tipoDia, setTipoDia] = useState('Lunes a Viernes');
   const [resultados, setResultados] = useState<Viaje[]>([]);
   const [haBuscado, setHaBuscado] = useState(false);
 
+  // Estados para Modal de Selección (TESA / Exprebus)
   const [modalVisible, setModalVisible] = useState(false);
   const [seleccionando, setSeleccionando] = useState<'origen' | 'destino' | 'dia'>('origen');
+
+  // Estados específicos para Empresa Gutiérrez
+  const [direccionGutierrez, setDireccionGutierrez] = useState<DireccionGutierrez>('ida');
+  const [busquedaGutierrez, setBusquedaGutierrez] = useState('');
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  // Búsqueda de viajes para TESA y Exprebus
+  const ejecutarBusquedaTradicional = (empresa: EmpresaTipo = empresaSeleccionada) => {
+    setHaBuscado(true);
+    const filtrados = TODOS_LOS_VIAJES.filter((viaje) => {
+      // 1. Filtrar por empresa
+      if (empresa !== 'Gutierrez' && viaje.empresa !== empresa) {
+        return false;
+      }
+
+      // 2. Filtrar por el día seleccionado
+      if (!viaje.dias || !viaje.dias.includes(tipoDia)) {
+        return false;
+      }
+
+      // 3. Verificar que existan horarios para ambos puntos
+      const horaOrigen = viaje.paradas[origen];
+      const horaDestino = viaje.paradas[destino];
+
+      if (!horaOrigen || !horaDestino) return false;
+
+      // 4. Sentido del viaje
+      const paradasArray = Object.keys(viaje.paradas);
+      const indexOrigen = paradasArray.indexOf(origen);
+      const indexDestino = paradasArray.indexOf(destino);
+
+      return indexOrigen < indexDestino;
+    });
+
+    filtrados.sort((a, b) => a.paradas[origen].localeCompare(b.paradas[origen]));
+    setResultados(filtrados);
+  };
+
+  const handleCambiarEmpresa = (nuevaEmpresa: EmpresaTipo) => {
+    setEmpresaSeleccionada(nuevaEmpresa);
+    if (nuevaEmpresa !== 'Gutierrez' && haBuscado) {
+      ejecutarBusquedaTradicional(nuevaEmpresa);
+    }
+  };
 
   const abrirSelector = (tipo: 'origen' | 'destino' | 'dia') => {
     setSeleccionando(tipo);
@@ -90,33 +213,42 @@ export default function ColectivosScreen() {
     setDestino(origen);
   };
 
-  const handleBuscar = () => {
-    setHaBuscado(true);
-    const filtrados = TODOS_LOS_VIAJES.filter((viaje) => {
-      // 1. Filtrar por el día seleccionado
-      if (!viaje.dias || !viaje.dias.includes(tipoDia)) {
-        return false;
-      }
+  // Filtrado reactivo de viajes para Gutiérrez
+  const viajesGutierrezFiltrados = useMemo(() => {
+    const lista =
+      direccionGutierrez === 'ida' ? GUTIERREZ_DATA.ida : GUTIERREZ_DATA.vuelta;
 
-      // 2. Verificar que existan horarios para ambos puntos
-      const horaOrigen = viaje.paradas[origen];
-      const horaDestino = viaje.paradas[destino];
+    if (!busquedaGutierrez.trim()) return lista;
 
-      if (!horaOrigen || !horaDestino) return false;
+    const term = busquedaGutierrez.trim().toLowerCase();
 
-      // 3. LÓGICA INFALIBLE: Verificar el sentido del viaje
-      // Object.keys(viaje.paradas) nos da el array de paradas en el orden exacto de la ruta
-      const paradasArray = Object.keys(viaje.paradas);
-      const indexOrigen = paradasArray.indexOf(origen);
-      const indexDestino = paradasArray.indexOf(destino);
-
-      // Si el origen aparece en la ruta DESPUÉS del destino, es un colectivo que va en sentido contrario
-      return indexOrigen < indexDestino;
-    });
-
-    filtrados.sort((a, b) => a.paradas[origen].localeCompare(b.paradas[origen]));
-    setResultados(filtrados);
-  };
+    if (direccionGutierrez === 'ida') {
+      return (lista as ServicioGutierrezIda[]).filter((item) => {
+        return (
+          item.destinoFinal?.toLowerCase().includes(term) ||
+          item.llegadaMedinas?.toLowerCase().includes(term) ||
+          item.llegadaMonteagudo?.toLowerCase().includes(term) ||
+          item.llegadaTrinidad?.toLowerCase().includes(term) ||
+          item.salidaItaliaColon?.toLowerCase().includes(term) ||
+          item.salidaTerminal?.toLowerCase().includes(term) ||
+          item.pasoTerminal?.toLowerCase().includes(term) ||
+          item.nota?.toLowerCase().includes(term)
+        );
+      });
+    } else {
+      return (lista as ServicioGutierrezVuelta[]).filter((item) => {
+        return (
+          item.destinoEspecial?.toLowerCase().includes(term) ||
+          item.salidaMonteagudo?.toLowerCase().includes(term) ||
+          item.salidaMedinas?.toLowerCase().includes(term) ||
+          item.salidaTrinidad?.toLowerCase().includes(term) ||
+          item.llegadaConcepcion?.toLowerCase().includes(term) ||
+          item.llegadaTerminal?.toLowerCase().includes(term) ||
+          item.nota?.toLowerCase().includes(term)
+        );
+      });
+    }
+  }, [direccionGutierrez, busquedaGutierrez]);
 
   const valorActual =
     seleccionando === 'origen'
@@ -141,128 +273,575 @@ export default function ColectivosScreen() {
 
   const precioActual = obtenerPrecio(origen, destino);
 
+  // Render Cabecera Común + Selectores
   const renderHeader = () => (
     <View>
-      {/* Título de la sección (Puerta secreta de administración mediante pulsación prolongada) */}
+      {/* Título de la sección con acceso secreto a admin por pulsación prolongada */}
       <TouchableOpacity
         activeOpacity={1}
         delayLongPress={2000}
         onLongPress={() => router.push('/admin' as any)}
       >
         <View style={styles.topHeader}>
-          <Text style={styles.screenTitle}>Buscador de Horarios</Text>
-          <Text style={styles.screenSubtitle}>Encuentra tu próximo viaje</Text>
+          <Text style={styles.screenTitle}>Horarios de Colectivos</Text>
+          <Text style={styles.screenSubtitle}>
+            Consulta salidas interurbanas y de media distancia en el Sur Tucumano
+          </Text>
         </View>
       </TouchableOpacity>
 
-      {/* Tarjeta Flotante de Búsqueda */}
-      <View style={styles.searchCard}>
-        {/* Selector Origen */}
-        <View style={styles.selectorWrapper}>
-          <Text style={styles.fieldLabel}>Origen</Text>
-          <TouchableOpacity
-            style={styles.selectorButton}
-            activeOpacity={0.7}
-            onPress={() => abrirSelector('origen')}>
-            <View style={styles.selectorLeft}>
-              <View style={[styles.circleMarker, { backgroundColor: '#2563EB' }]} />
-              <Text style={styles.selectorText}>{origen}</Text>
-            </View>
-            <FontAwesome name="chevron-down" size={13} color="#94A3B8" />
-          </TouchableOpacity>
-        </View>
-
-        {/* Botón flotante para intercambiar origen/destino */}
-        <View style={styles.dividerRow}>
-          <View style={styles.dashedLine} />
-          <TouchableOpacity
-            style={styles.switchButton}
-            activeOpacity={0.8}
-            onPress={intercambiarCiudades}>
-            <FontAwesome
-              name="exchange"
-              size={13}
-              color="#2563EB"
-              style={{ transform: [{ rotate: '90deg' }] }}
-            />
-          </TouchableOpacity>
-        </View>
-
-        {/* Selector Destino */}
-        <View style={styles.selectorWrapper}>
-          <Text style={styles.fieldLabel}>Destino</Text>
-          <TouchableOpacity
-            style={styles.selectorButton}
-            activeOpacity={0.7}
-            onPress={() => abrirSelector('destino')}>
-            <View style={styles.selectorLeft}>
-              <View style={[styles.circleMarker, { backgroundColor: '#10B981' }]} />
-              <Text style={styles.selectorText}>{destino}</Text>
-            </View>
-            <FontAwesome name="chevron-down" size={13} color="#94A3B8" />
-          </TouchableOpacity>
-        </View>
-
-        {/* Selector Día de la Semana */}
-        <View style={[styles.selectorWrapper, { marginTop: 14 }]}>
-          <Text style={styles.fieldLabel}>Día de la semana</Text>
-          <TouchableOpacity
-            style={styles.selectorButton}
-            activeOpacity={0.7}
-            onPress={() => abrirSelector('dia')}>
-            <View style={styles.selectorLeft}>
-              <View style={[styles.circleMarker, { backgroundColor: '#8B5CF6' }]} />
-              <Text style={styles.selectorText}>{tipoDia}</Text>
-            </View>
-            <FontAwesome name="calendar" size={14} color="#94A3B8" />
-          </TouchableOpacity>
-        </View>
-
-        {/* Botón Primario de Búsqueda */}
-        <TouchableOpacity
-          style={styles.searchButton}
-          activeOpacity={0.85}
-          onPress={handleBuscar}>
-          <FontAwesome name="search" size={16} color="#FFFFFF" />
-          <Text style={styles.searchButtonText}>Buscar Horarios</Text>
-        </TouchableOpacity>
+      {/* SELECTOR DE EMPRESA (PILL TABS) */}
+      <View style={styles.companySelectorWrapper}>
+        <Text style={styles.selectorSectionLabel}>Seleccionar Empresa:</Text>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.companySelectorScroll}
+        >
+          {EMPRESAS.map((emp) => {
+            const isActive = empresaSeleccionada === emp.id;
+            return (
+              <TouchableOpacity
+                key={emp.id}
+                style={[
+                  styles.companyPill,
+                  isActive && styles.companyPillActive,
+                ]}
+                onPress={() => handleCambiarEmpresa(emp.id)}
+                activeOpacity={0.8}
+              >
+                <FontAwesome
+                  name="bus"
+                  size={13}
+                  color={isActive ? '#FFFFFF' : '#64748B'}
+                  style={{ marginRight: 7 }}
+                />
+                <Text
+                  style={[
+                    styles.companyPillText,
+                    isActive && styles.companyPillTextActive,
+                  ]}
+                >
+                  {emp.label}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
       </View>
 
-      {/* Título de la lista de resultados */}
-      <View style={styles.resultsHeader}>
-        <Text style={styles.resultsTitle}>Próximas Salidas</Text>
-        <Text style={styles.resultsBadge}>
-          {resultados.length} {resultados.length === 1 ? 'encontrado' : 'encontrados'}
-        </Text>
-      </View>
+      {/* VISTA SEGÚN EMPRESA SELECCIONADA */}
+      {empresaSeleccionada === 'Gutierrez' ? (
+        <View style={styles.gutierrezContainer}>
+          {/* Tarjeta Informativa de la Línea Gutiérrez */}
+          <View style={styles.gutierrezInfoCard}>
+            <View style={styles.gutierrezInfoHeader}>
+              <View style={styles.gutierrezLogoBadge}>
+                <Ionicons name="git-network-outline" size={18} color="#0284C7" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.gutierrezLineTitle}>{GUTIERREZ_DATA.linea}</Text>
+                <Text style={styles.gutierrezLineSubtitle}>
+                  {GUTIERREZ_DATA.tipoDia} • Vigencia: {GUTIERREZ_DATA.vigencia}
+                </Text>
+              </View>
+            </View>
+          </View>
+
+          {/* SELECTOR DE DIRECCIÓN (IDA / VUELTA) */}
+          <View style={styles.directionSection}>
+            <Text style={styles.selectorSectionLabel}>Sentido del Viaje:</Text>
+            <View style={styles.directionToggleContainer}>
+              {/* Opción IDA */}
+              <TouchableOpacity
+                style={[
+                  styles.directionTab,
+                  direccionGutierrez === 'ida' && styles.directionTabActive,
+                ]}
+                onPress={() => setDireccionGutierrez('ida')}
+                activeOpacity={0.8}
+              >
+                <View style={styles.directionTabHeader}>
+                  <Ionicons
+                    name="arrow-forward-circle"
+                    size={16}
+                    color={direccionGutierrez === 'ida' ? '#FFFFFF' : '#0284C7'}
+                  />
+                  <Text
+                    style={[
+                      styles.directionTabTitle,
+                      direccionGutierrez === 'ida' && styles.directionTabTitleActive,
+                    ]}
+                  >
+                    Ida
+                  </Text>
+                </View>
+                <Text
+                  style={[
+                    styles.directionTabSubtext,
+                    direccionGutierrez === 'ida' && styles.directionTabSubtextActive,
+                  ]}
+                  numberOfLines={2}
+                >
+                  Concepción ➔ Trinidad / Medinas / Monteagudo
+                </Text>
+              </TouchableOpacity>
+
+              {/* Opción VUELTA */}
+              <TouchableOpacity
+                style={[
+                  styles.directionTab,
+                  direccionGutierrez === 'vuelta' && styles.directionTabActive,
+                ]}
+                onPress={() => setDireccionGutierrez('vuelta')}
+                activeOpacity={0.8}
+              >
+                <View style={styles.directionTabHeader}>
+                  <Ionicons
+                    name="arrow-back-circle"
+                    size={16}
+                    color={direccionGutierrez === 'vuelta' ? '#FFFFFF' : '#0284C7'}
+                  />
+                  <Text
+                    style={[
+                      styles.directionTabTitle,
+                      direccionGutierrez === 'vuelta' && styles.directionTabTitleActive,
+                    ]}
+                  >
+                    Vuelta
+                  </Text>
+                </View>
+                <Text
+                  style={[
+                    styles.directionTabSubtext,
+                    direccionGutierrez === 'vuelta' && styles.directionTabSubtextActive,
+                  ]}
+                  numberOfLines={2}
+                >
+                  Monteagudo / Medinas / Trinidad ➔ Concepción
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          {/* BUSCADOR / FILTRO RÁPIDO */}
+          <View style={styles.searchBoxWrapper}>
+            <View style={styles.searchBox}>
+              <Ionicons name="search" size={17} color="#64748B" />
+              <TextInput
+                style={styles.searchInput}
+                placeholder="Buscar por parada o destino (ej. Medinas, Trinidad, Cristo Rey...)"
+                placeholderTextColor="#94A3B8"
+                value={busquedaGutierrez}
+                onChangeText={setBusquedaGutierrez}
+                autoCorrect={false}
+              />
+              {busquedaGutierrez.length > 0 && (
+                <TouchableOpacity
+                  onPress={() => setBusquedaGutierrez('')}
+                  activeOpacity={0.7}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                >
+                  <Ionicons name="close-circle" size={18} color="#94A3B8" />
+                </TouchableOpacity>
+              )}
+            </View>
+          </View>
+
+          {/* Título de Resultados de Gutiérrez */}
+          <View style={styles.resultsHeader}>
+            <Text style={styles.resultsTitle}>
+              {direccionGutierrez === 'ida' ? 'Salidas desde Concepción' : 'Salidas hacia Concepción'}
+            </Text>
+            <Text style={styles.resultsBadge}>
+              {viajesGutierrezFiltrados.length}{' '}
+              {viajesGutierrezFiltrados.length === 1 ? 'servicio' : 'servicios'}
+            </Text>
+          </View>
+        </View>
+      ) : (
+        /* Tarjeta de Búsqueda Tradicional (TESA / Exprebus) */
+        <View style={styles.searchCard}>
+          {/* Selector Origen */}
+          <View style={styles.selectorWrapper}>
+            <Text style={styles.fieldLabel}>Origen</Text>
+            <TouchableOpacity
+              style={styles.selectorButton}
+              activeOpacity={0.7}
+              onPress={() => abrirSelector('origen')}
+            >
+              <View style={styles.selectorLeft}>
+                <View style={[styles.circleMarker, { backgroundColor: '#2563EB' }]} />
+                <Text style={styles.selectorText}>{origen}</Text>
+              </View>
+              <FontAwesome name="chevron-down" size={13} color="#94A3B8" />
+            </TouchableOpacity>
+          </View>
+
+          {/* Botón para intercambiar origen/destino */}
+          <View style={styles.dividerRow}>
+            <View style={styles.dashedLine} />
+            <TouchableOpacity
+              style={styles.switchButton}
+              activeOpacity={0.8}
+              onPress={intercambiarCiudades}
+            >
+              <FontAwesome
+                name="exchange"
+                size={13}
+                color="#2563EB"
+                style={{ transform: [{ rotate: '90deg' }] }}
+              />
+            </TouchableOpacity>
+          </View>
+
+          {/* Selector Destino */}
+          <View style={styles.selectorWrapper}>
+            <Text style={styles.fieldLabel}>Destino</Text>
+            <TouchableOpacity
+              style={styles.selectorButton}
+              activeOpacity={0.7}
+              onPress={() => abrirSelector('destino')}
+            >
+              <View style={styles.selectorLeft}>
+                <View style={[styles.circleMarker, { backgroundColor: '#10B981' }]} />
+                <Text style={styles.selectorText}>{destino}</Text>
+              </View>
+              <FontAwesome name="chevron-down" size={13} color="#94A3B8" />
+            </TouchableOpacity>
+          </View>
+
+          {/* Selector Día de la Semana */}
+          <View style={[styles.selectorWrapper, { marginTop: 14 }]}>
+            <Text style={styles.fieldLabel}>Día de la semana</Text>
+            <TouchableOpacity
+              style={styles.selectorButton}
+              activeOpacity={0.7}
+              onPress={() => abrirSelector('dia')}
+            >
+              <View style={styles.selectorLeft}>
+                <View style={[styles.circleMarker, { backgroundColor: '#8B5CF6' }]} />
+                <Text style={styles.selectorText}>{tipoDia}</Text>
+              </View>
+              <FontAwesome name="calendar" size={14} color="#94A3B8" />
+            </TouchableOpacity>
+          </View>
+
+          {/* Botón de Búsqueda */}
+          <TouchableOpacity
+            style={styles.searchButton}
+            activeOpacity={0.85}
+            onPress={() => ejecutarBusquedaTradicional()}
+          >
+            <FontAwesome name="search" size={16} color="#FFFFFF" />
+            <Text style={styles.searchButtonText}>Buscar Horarios {empresaSeleccionada}</Text>
+          </TouchableOpacity>
+
+          {/* Título de la lista de resultados */}
+          <View style={[styles.resultsHeader, { marginTop: 24, marginBottom: 0 }]}>
+            <Text style={styles.resultsTitle}>Próximas Salidas ({empresaSeleccionada})</Text>
+            <Text style={styles.resultsBadge}>
+              {resultados.length} {resultados.length === 1 ? 'encontrado' : 'encontrados'}
+            </Text>
+          </View>
+        </View>
+      )}
     </View>
   );
 
-  const renderEmptyComponent = () => {
-    if (!haBuscado) {
-      return (
-        <View style={styles.emptyContainer}>
-          <FontAwesome name="compass" size={40} color="#CBD5E1" />
-          <Text style={styles.emptyTitle}>Selecciona origen, destino y día</Text>
-          <Text style={styles.emptySubtitle}>
-            Presiona &quot;Buscar Horarios&quot; para consultar las salidas disponibles
-          </Text>
-        </View>
-      );
-    }
+  // Render Card para Gutiérrez (Ida)
+  const renderGutierrezCardIda = (item: ServicioGutierrezIda) => {
+    const horaSalidaPrincipal = item.salidaItaliaColon;
+    const horaLlegadaPrincipal =
+      item.llegadaMonteagudo || item.llegadaMedinas || item.llegadaTrinidad || '--:--';
+
+    const esCaminoViejo =
+      item.salidaTerminal === 'C.V.' ||
+      item.nota?.toLowerCase().includes('camino viejo');
+    const esPorIngenio =
+      item.llegadaMedinas?.toLowerCase().includes('ingenio') ||
+      item.nota?.toLowerCase().includes('ingenio');
+    const esPorTerminal =
+      item.pasoTerminal !== null ||
+      (item.salidaTerminal !== null && item.salidaTerminal !== 'C.V.');
+    const esEscolar = item.nota?.toLowerCase().includes('escolar');
 
     return (
-      <View style={styles.emptyContainer}>
-        <FontAwesome name="exclamation-circle" size={40} color="#CBD5E1" />
-        <Text style={styles.emptyTitle}>No hay salidas disponibles</Text>
-        <Text style={styles.emptySubtitle}>
-          No se encontraron viajes directos entre {origen} y {destino} para {tipoDia}
-        </Text>
+      <View style={styles.gutierrezCard}>
+        {/* Cabecera de la Tarjeta */}
+        <View style={styles.gCardHeader}>
+          <View style={styles.gCardBadgeRow}>
+            <View style={styles.gEmpresaBadge}>
+              <FontAwesome name="bus" size={11} color="#0284C7" />
+              <Text style={styles.gEmpresaText}>Gutiérrez</Text>
+            </View>
+            <Text style={styles.gIdText}>#{item.id.replace('g-ida-', '')}</Text>
+          </View>
+
+          {/* Destino Final con Badge Visual */}
+          <View style={[styles.gDestinoBadge, getDestinoBadgeStyle(item.destinoFinal)]}>
+            <Ionicons
+              name="location-sharp"
+              size={12}
+              color={getDestinoBadgeColor(item.destinoFinal)}
+            />
+            <Text
+              style={[
+                styles.gDestinoBadgeText,
+                { color: getDestinoBadgeColor(item.destinoFinal) },
+              ]}
+            >
+              {item.destinoFinal}
+            </Text>
+          </View>
+        </View>
+
+        {/* Sección Horarios Principales */}
+        <View style={styles.gTimeRow}>
+          <View style={styles.gTimeCol}>
+            <Text style={styles.gTimeLabel}>Salida Concepción</Text>
+            <Text style={styles.gTimeMain}>{horaSalidaPrincipal}</Text>
+            <Text style={styles.gTimeSub}>Italia y Colón</Text>
+          </View>
+
+          <View style={styles.gArrowCol}>
+            <Ionicons name="arrow-forward" size={18} color="#94A3B8" />
+            <Text style={styles.gDirectoText}>Interurbano</Text>
+          </View>
+
+          <View style={[styles.gTimeCol, { alignItems: 'flex-end' }]}>
+            <Text style={styles.gTimeLabel}>Llegada Est.</Text>
+            <Text style={[styles.gTimeMain, { color: '#0F172A' }]}>{horaLlegadaPrincipal}</Text>
+            <Text style={styles.gTimeSub}>{item.destinoFinal}</Text>
+          </View>
+        </View>
+
+        {/* Timeline / Tiempos Estimados de Paso */}
+        <View style={styles.gTimelineContainer}>
+          <Text style={styles.gTimelineTitle}>Puntos intermedios de paso:</Text>
+          <View style={styles.gStopsRow}>
+            {item.salidaTerminal && item.salidaTerminal !== 'C.V.' && (
+              <View style={styles.gStopPill}>
+                <Text style={styles.gStopName}>Terminal</Text>
+                <Text style={styles.gStopTime}>{item.salidaTerminal}</Text>
+              </View>
+            )}
+            <View style={styles.gStopPill}>
+              <Text style={styles.gStopName}>It. y Colón</Text>
+              <Text style={styles.gStopTime}>{item.salidaItaliaColon}</Text>
+            </View>
+            {item.pasoTerminal && (
+              <View style={[styles.gStopPill, { backgroundColor: '#EFF6FF', borderColor: '#BFDBFE' }]}>
+                <Text style={[styles.gStopName, { color: '#1E40AF' }]}>Paso Term.</Text>
+                <Text style={[styles.gStopTime, { color: '#1E40AF' }]}>{item.pasoTerminal}</Text>
+              </View>
+            )}
+            {item.llegadaTrinidad && (
+              <View style={styles.gStopPill}>
+                <Text style={styles.gStopName}>Trinidad</Text>
+                <Text style={styles.gStopTime}>{item.llegadaTrinidad}</Text>
+              </View>
+            )}
+            {item.llegadaMedinas && (
+              <View style={styles.gStopPill}>
+                <Text style={styles.gStopName}>Medinas</Text>
+                <Text style={styles.gStopTime}>{item.llegadaMedinas}</Text>
+              </View>
+            )}
+            {item.llegadaMonteagudo && (
+              <View style={styles.gStopPill}>
+                <Text style={styles.gStopName}>Monteagudo</Text>
+                <Text style={styles.gStopTime}>{item.llegadaMonteagudo}</Text>
+              </View>
+            )}
+          </View>
+        </View>
+
+        {/* Badges Adicionales y Notas */}
+        <View style={styles.gFooterRow}>
+          <View style={styles.gBadgesWrap}>
+            {esPorIngenio && (
+              <View style={[styles.gAttrBadge, { backgroundColor: '#FEF3C7', borderColor: '#FDE68A' }]}>
+                <Ionicons name="business-outline" size={11} color="#B45309" />
+                <Text style={[styles.gAttrBadgeText, { color: '#B45309' }]}>Por Ingenio</Text>
+              </View>
+            )}
+            {esCaminoViejo && (
+              <View style={[styles.gAttrBadge, { backgroundColor: '#F3E8FF', borderColor: '#E9D5FF' }]}>
+                <Ionicons name="git-branch-outline" size={11} color="#7E22CE" />
+                <Text style={[styles.gAttrBadgeText, { color: '#7E22CE' }]}>Camino Viejo</Text>
+              </View>
+            )}
+            {esPorTerminal && (
+              <View style={[styles.gAttrBadge, { backgroundColor: '#E0F2FE', borderColor: '#BAE6FD' }]}>
+                <Ionicons name="bus-outline" size={11} color="#0369A1" />
+                <Text style={[styles.gAttrBadgeText, { color: '#0369A1' }]}>
+                  {item.pasoTerminal ? `Por Terminal (${item.pasoTerminal})` : 'Por Terminal'}
+                </Text>
+              </View>
+            )}
+            {esEscolar && (
+              <View style={[styles.gAttrBadge, { backgroundColor: '#FFEDD5', borderColor: '#FED7AA' }]}>
+                <Ionicons name="school-outline" size={11} color="#C2410C" />
+                <Text style={[styles.gAttrBadgeText, { color: '#C2410C' }]}>Servicio Escolar</Text>
+              </View>
+            )}
+          </View>
+
+          {item.nota && !esCaminoViejo && !esPorIngenio && (
+            <Text style={styles.gNotaText}>{item.nota}</Text>
+          )}
+        </View>
       </View>
     );
   };
 
-  const renderItem = ({ item }: { item: Viaje }) => {
+  // Render Card para Gutiérrez (Vuelta)
+  const renderGutierrezCardVuelta = (item: ServicioGutierrezVuelta) => {
+    const horaSalidaPrincipal =
+      item.salidaMonteagudo || item.salidaMedinas || item.salidaTrinidad || '--:--';
+    const lugarSalidaPrincipal = item.salidaMonteagudo
+      ? item.salidaMonteagudo.includes('Sta. Rita')
+        ? 'Santa Rita'
+        : item.salidaMonteagudo.includes('C.C.Rey')
+        ? 'Col. Cristo Rey'
+        : item.salidaMonteagudo.includes('S.C.')
+        ? 'San Carlos'
+        : 'Monteagudo'
+      : item.salidaMedinas
+      ? 'Medinas'
+      : 'La Trinidad';
+
+    const esCaminoViejo =
+      item.salidaMedinas?.toLowerCase().includes('c.v.') ||
+      item.nota?.toLowerCase().includes('camino viejo');
+    const esPorIngenio =
+      item.salidaMedinas?.toLowerCase().includes('ingenio') ||
+      item.nota?.toLowerCase().includes('ingenio');
+    const esHastaTerminal =
+      item.destinoEspecial?.toLowerCase().includes('terminal') ||
+      item.llegadaTerminal?.toLowerCase().includes('terminal');
+
+    return (
+      <View style={styles.gutierrezCard}>
+        {/* Cabecera */}
+        <View style={styles.gCardHeader}>
+          <View style={styles.gCardBadgeRow}>
+            <View style={styles.gEmpresaBadge}>
+              <FontAwesome name="bus" size={11} color="#0284C7" />
+              <Text style={styles.gEmpresaText}>Gutiérrez</Text>
+            </View>
+            <Text style={styles.gIdText}>#{item.id.replace('g-vta-', '')}</Text>
+          </View>
+
+          {/* Destino Final Especial con Badge */}
+          <View style={[styles.gDestinoBadge, getDestinoBadgeStyle(item.destinoEspecial || 'Concepción')]}>
+            <Ionicons
+              name="navigate-circle"
+              size={13}
+              color={getDestinoBadgeColor(item.destinoEspecial || 'Concepción')}
+            />
+            <Text
+              style={[
+                styles.gDestinoBadgeText,
+                { color: getDestinoBadgeColor(item.destinoEspecial || 'Concepción') },
+              ]}
+            >
+              {item.destinoEspecial || 'Concepción'}
+            </Text>
+          </View>
+        </View>
+
+        {/* Sección Horarios Principales */}
+        <View style={styles.gTimeRow}>
+          <View style={styles.gTimeCol}>
+            <Text style={styles.gTimeLabel}>Salida Origen</Text>
+            <Text style={styles.gTimeMain}>{horaSalidaPrincipal}</Text>
+            <Text style={styles.gTimeSub}>{lugarSalidaPrincipal}</Text>
+          </View>
+
+          <View style={styles.gArrowCol}>
+            <Ionicons name="arrow-forward" size={18} color="#94A3B8" />
+            <Text style={styles.gDirectoText}>A Concepción</Text>
+          </View>
+
+          <View style={[styles.gTimeCol, { alignItems: 'flex-end' }]}>
+            <Text style={styles.gTimeLabel}>Llegada Concepción</Text>
+            <Text style={[styles.gTimeMain, { color: '#0F172A' }]}>{item.llegadaConcepcion}</Text>
+            <Text style={styles.gTimeSub}>
+              {item.llegadaTerminal ? `Ext: ${item.llegadaTerminal}` : 'Centro'}
+            </Text>
+          </View>
+        </View>
+
+        {/* Timeline / Tiempos Estimados de Paso */}
+        <View style={styles.gTimelineContainer}>
+          <Text style={styles.gTimelineTitle}>Puntos intermedios de paso:</Text>
+          <View style={styles.gStopsRow}>
+            {item.salidaMonteagudo && (
+              <View style={styles.gStopPill}>
+                <Text style={styles.gStopName}>Monteagudo/Ext.</Text>
+                <Text style={styles.gStopTime}>{item.salidaMonteagudo}</Text>
+              </View>
+            )}
+            {item.salidaMedinas && (
+              <View style={styles.gStopPill}>
+                <Text style={styles.gStopName}>Medinas</Text>
+                <Text style={styles.gStopTime}>{item.salidaMedinas}</Text>
+              </View>
+            )}
+            {item.salidaTrinidad && (
+              <View style={styles.gStopPill}>
+                <Text style={styles.gStopName}>Trinidad</Text>
+                <Text style={styles.gStopTime}>{item.salidaTrinidad}</Text>
+              </View>
+            )}
+            <View style={styles.gStopPill}>
+              <Text style={styles.gStopName}>Concepción</Text>
+              <Text style={styles.gStopTime}>{item.llegadaConcepcion}</Text>
+            </View>
+            {item.llegadaTerminal && (
+              <View style={[styles.gStopPill, { backgroundColor: '#EFF6FF', borderColor: '#BFDBFE' }]}>
+                <Text style={[styles.gStopName, { color: '#1E40AF' }]}>Extensión</Text>
+                <Text style={[styles.gStopTime, { color: '#1E40AF' }]}>{item.llegadaTerminal}</Text>
+              </View>
+            )}
+          </View>
+        </View>
+
+        {/* Badges Adicionales y Notas */}
+        <View style={styles.gFooterRow}>
+          <View style={styles.gBadgesWrap}>
+            {esPorIngenio && (
+              <View style={[styles.gAttrBadge, { backgroundColor: '#FEF3C7', borderColor: '#FDE68A' }]}>
+                <Ionicons name="business-outline" size={11} color="#B45309" />
+                <Text style={[styles.gAttrBadgeText, { color: '#B45309' }]}>Por Ingenio</Text>
+              </View>
+            )}
+            {esCaminoViejo && (
+              <View style={[styles.gAttrBadge, { backgroundColor: '#F3E8FF', borderColor: '#E9D5FF' }]}>
+                <Ionicons name="git-branch-outline" size={11} color="#7E22CE" />
+                <Text style={[styles.gAttrBadgeText, { color: '#7E22CE' }]}>Camino Viejo</Text>
+              </View>
+            )}
+            {esHastaTerminal && (
+              <View style={[styles.gAttrBadge, { backgroundColor: '#E0F2FE', borderColor: '#BAE6FD' }]}>
+                <Ionicons name="bus-outline" size={11} color="#0369A1" />
+                <Text style={[styles.gAttrBadgeText, { color: '#0369A1' }]}>Hasta Terminal</Text>
+              </View>
+            )}
+          </View>
+
+          {item.nota && (
+            <Text style={styles.gNotaText}>{item.nota}</Text>
+          )}
+        </View>
+      </View>
+    );
+  };
+
+  // Render Component para TESA / Exprebus
+  const renderItemTradicional = ({ item }: { item: Viaje }) => {
     const horaSalida = item.paradas?.[origen];
     const horaLlegada = item.paradas?.[destino];
 
@@ -280,12 +859,14 @@ export default function ColectivosScreen() {
             style={[
               styles.companyBadge,
               { backgroundColor: isTesa ? '#e0f2fe' : '#ffedd5' },
-            ]}>
+            ]}
+          >
             <Text
               style={[
                 styles.companyName,
                 { color: isTesa ? '#0369a1' : '#c2410c' },
-              ]}>
+              ]}
+            >
               {item.empresa}
             </Text>
           </View>
@@ -293,18 +874,20 @@ export default function ColectivosScreen() {
             style={[
               styles.typeBadge,
               { backgroundColor: isDirecto ? '#ECFDF5' : '#F1F5F9' },
-            ]}>
+            ]}
+          >
             <Text
               style={[
                 styles.typeText,
                 { color: isDirecto ? '#047857' : '#475569' },
-              ]}>
+              ]}
+            >
               {item.tipo}
             </Text>
           </View>
         </View>
 
-        {/* Centro: Horarios exactos extraídos de paradas */}
+        {/* Centro: Horarios exactos */}
         <View style={styles.timeColumn}>
           <View style={styles.timeSchedule}>
             <Text style={styles.timeMain}>{horaSalida}</Text>
@@ -333,31 +916,79 @@ export default function ColectivosScreen() {
     );
   };
 
+  const renderEmptyComponent = () => {
+    if (empresaSeleccionada === 'Gutierrez') {
+      return (
+        <View style={styles.emptyContainer}>
+          <Ionicons name="search-outline" size={40} color="#CBD5E1" />
+          <Text style={styles.emptyTitle}>No se encontraron salidas</Text>
+          <Text style={styles.emptySubtitle}>
+            No hay viajes de la empresa Gutiérrez que coincidan con &quot;{busquedaGutierrez}&quot; para este sentido.
+          </Text>
+        </View>
+      );
+    }
+
+    if (!haBuscado) {
+      return (
+        <View style={styles.emptyContainer}>
+          <FontAwesome name="compass" size={40} color="#CBD5E1" />
+          <Text style={styles.emptyTitle}>Selecciona origen, destino y día</Text>
+          <Text style={styles.emptySubtitle}>
+            Presiona &quot;Buscar Horarios&quot; para consultar las salidas disponibles
+          </Text>
+        </View>
+      );
+    }
+
+    return (
+      <View style={styles.emptyContainer}>
+        <FontAwesome name="exclamation-circle" size={40} color="#CBD5E1" />
+        <Text style={styles.emptyTitle}>No hay salidas disponibles</Text>
+        <Text style={styles.emptySubtitle}>
+          No se encontraron viajes directos entre {origen} y {destino} para {tipoDia} en {empresaSeleccionada}
+        </Text>
+      </View>
+    );
+  };
+
   return (
     <SafeAreaView style={styles.container} edges={['left', 'right']}>
-      <FlatList
-        data={resultados}
-        keyExtractor={(item) => item.id}
-        renderItem={renderItem}
-        ListHeaderComponent={renderHeader}
-        ListEmptyComponent={renderEmptyComponent}
-        contentContainerStyle={styles.listContent}
-        showsVerticalScrollIndicator={false}
-      />
+      {empresaSeleccionada === 'Gutierrez' ? (
+        <FlatList
+          data={viajesGutierrezFiltrados as any}
+          keyExtractor={(item: any) => item.id}
+          renderItem={({ item }) =>
+            direccionGutierrez === 'ida'
+              ? renderGutierrezCardIda(item)
+              : renderGutierrezCardVuelta(item)
+          }
+          ListHeaderComponent={renderHeader}
+          ListEmptyComponent={renderEmptyComponent}
+          contentContainerStyle={styles.listContent}
+          showsVerticalScrollIndicator={false}
+        />
+      ) : (
+        <FlatList
+          data={resultados}
+          keyExtractor={(item) => item.id}
+          renderItem={renderItemTradicional}
+          ListHeaderComponent={renderHeader}
+          ListEmptyComponent={renderEmptyComponent}
+          contentContainerStyle={styles.listContent}
+          showsVerticalScrollIndicator={false}
+        />
+      )}
 
-      {/* Modal dinámico para selección de Ciudad o Día */}
+      {/* Modal dinámico para selección de Ciudad o Día (TESA / Exprebus) */}
       <Modal
         visible={modalVisible}
         transparent={true}
         animationType="fade"
-        onRequestClose={() => setModalVisible(false)}>
-        <Pressable
-          style={styles.modalOverlay}
-          onPress={() => setModalVisible(false)}>
-          <Pressable
-            style={styles.modalContainer}
-            onPress={(e) => e.stopPropagation()}>
-            {/* Cabecera del Modal */}
+        onRequestClose={() => setModalVisible(false)}
+      >
+        <Pressable style={styles.modalOverlay} onPress={() => setModalVisible(false)}>
+          <Pressable style={styles.modalContainer} onPress={(e) => e.stopPropagation()}>
             <View style={styles.modalHeader}>
               <View>
                 <Text style={styles.modalTitle}>{tituloModal}</Text>
@@ -366,12 +997,12 @@ export default function ColectivosScreen() {
               <TouchableOpacity
                 style={styles.modalCloseButton}
                 activeOpacity={0.7}
-                onPress={() => setModalVisible(false)}>
+                onPress={() => setModalVisible(false)}
+              >
                 <FontAwesome name="times" size={16} color="#64748B" />
               </TouchableOpacity>
             </View>
 
-            {/* Lista de Opciones */}
             <FlatList
               data={listaModal}
               keyExtractor={(item) => item}
@@ -380,12 +1011,10 @@ export default function ColectivosScreen() {
                 const isSelected = item === valorActual;
                 return (
                   <TouchableOpacity
-                    style={[
-                      styles.cityItem,
-                      isSelected && styles.cityItemSelected,
-                    ]}
+                    style={[styles.cityItem, isSelected && styles.cityItemSelected]}
                     activeOpacity={0.7}
-                    onPress={() => seleccionarOpcion(item)}>
+                    onPress={() => seleccionarOpcion(item)}
+                  >
                     <View style={styles.cityItemLeft}>
                       <View
                         style={[
@@ -399,7 +1028,8 @@ export default function ColectivosScreen() {
                           styles.cityItemText,
                           isSelected && styles.cityItemTextSelected,
                           seleccionando === 'dia' && isSelected && { color: '#6D28D9' },
-                        ]}>
+                        ]}
+                      >
                         {item}
                       </Text>
                     </View>
@@ -429,7 +1059,7 @@ const styles = StyleSheet.create({
   listContent: {
     paddingHorizontal: 20,
     paddingTop: 12,
-    paddingBottom: 32,
+    paddingBottom: 36,
   },
   topHeader: {
     marginBottom: 16,
@@ -442,11 +1072,425 @@ const styles = StyleSheet.create({
     letterSpacing: -0.5,
   },
   screenSubtitle: {
-    fontSize: 15,
+    fontSize: 14,
     color: '#64748B',
     marginTop: 4,
     fontWeight: '500',
+    lineHeight: 20,
   },
+
+  /* SELECTOR DE EMPRESA (PILL TABS) */
+  companySelectorWrapper: {
+    marginBottom: 16,
+  },
+  selectorSectionLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#475569',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 8,
+  },
+  companySelectorScroll: {
+    flexDirection: 'row',
+    gap: 8,
+    paddingVertical: 2,
+  },
+  companyPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 24,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.04,
+        shadowRadius: 4,
+      },
+      android: {
+        elevation: 1,
+      },
+      default: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.04,
+        shadowRadius: 4,
+      },
+    }),
+  },
+  companyPillActive: {
+    backgroundColor: '#0284C7',
+    borderColor: '#0284C7',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#0284C7',
+        shadowOffset: { width: 0, height: 3 },
+        shadowOpacity: 0.25,
+        shadowRadius: 6,
+      },
+      android: {
+        elevation: 3,
+      },
+      default: {
+        shadowColor: '#0284C7',
+        shadowOffset: { width: 0, height: 3 },
+        shadowOpacity: 0.25,
+        shadowRadius: 6,
+      },
+    }),
+  },
+  companyPillText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#475569',
+  },
+  companyPillTextActive: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+  },
+
+  /* VISTA GUTIÉRREZ */
+  gutierrezContainer: {
+    marginBottom: 12,
+  },
+  gutierrezInfoCard: {
+    backgroundColor: '#F0F9FF',
+    borderRadius: 16,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: '#BAE6FD',
+    marginBottom: 16,
+  },
+  gutierrezInfoHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  gutierrezLogoBadge: {
+    width: 38,
+    height: 38,
+    borderRadius: 10,
+    backgroundColor: '#E0F2FE',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  gutierrezLineTitle: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: '#0369A1',
+    letterSpacing: -0.2,
+  },
+  gutierrezLineSubtitle: {
+    fontSize: 12,
+    color: '#0284C7',
+    marginTop: 2,
+    fontWeight: '500',
+  },
+
+  /* SELECTOR DE DIRECCIÓN */
+  directionSection: {
+    marginBottom: 14,
+  },
+  directionToggleContainer: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  directionTab: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.04,
+        shadowRadius: 4,
+      },
+      android: {
+        elevation: 1,
+      },
+      default: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.04,
+        shadowRadius: 4,
+      },
+    }),
+  },
+  directionTabActive: {
+    backgroundColor: '#0284C7',
+    borderColor: '#0284C7',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#0284C7',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.25,
+        shadowRadius: 8,
+      },
+      android: {
+        elevation: 3,
+      },
+      default: {
+        shadowColor: '#0284C7',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.25,
+        shadowRadius: 8,
+      },
+    }),
+  },
+  directionTabHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 4,
+  },
+  directionTabTitle: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#0F172A',
+  },
+  directionTabTitleActive: {
+    color: '#FFFFFF',
+  },
+  directionTabSubtext: {
+    fontSize: 11,
+    color: '#64748B',
+    lineHeight: 15,
+  },
+  directionTabSubtextActive: {
+    color: '#E0F2FE',
+  },
+
+  /* BUSCADOR RÁPIDO GUTIÉRREZ */
+  searchBoxWrapper: {
+    marginBottom: 16,
+  },
+  searchBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    paddingVertical: Platform.OS === 'ios' ? 12 : 8,
+    gap: 10,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.03,
+        shadowRadius: 4,
+      },
+      android: {
+        elevation: 1,
+      },
+      default: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.03,
+        shadowRadius: 4,
+      },
+    }),
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 14,
+    color: '#0F172A',
+    fontWeight: '500',
+  },
+
+  /* TARJETA GUTIÉRREZ */
+  gutierrezCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    padding: 16,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 3 },
+        shadowOpacity: 0.05,
+        shadowRadius: 6,
+      },
+      android: {
+        elevation: 2,
+      },
+      default: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 3 },
+        shadowOpacity: 0.05,
+        shadowRadius: 6,
+      },
+    }),
+  },
+  gCardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
+  gCardBadgeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  gEmpresaBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: '#E0F2FE',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+  },
+  gEmpresaText: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#0284C7',
+    textTransform: 'uppercase',
+    letterSpacing: 0.3,
+  },
+  gIdText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#94A3B8',
+  },
+  gDestinoBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  gDestinoBadgeText: {
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 0.2,
+  },
+  gTimeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 6,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+    marginBottom: 10,
+  },
+  gTimeCol: {
+    flex: 1,
+  },
+  gTimeLabel: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#94A3B8',
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
+    marginBottom: 2,
+  },
+  gTimeMain: {
+    fontSize: 22,
+    fontWeight: '800',
+    color: '#0284C7',
+    letterSpacing: -0.5,
+  },
+  gTimeSub: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#475569',
+    marginTop: 1,
+  },
+  gArrowCol: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 8,
+  },
+  gDirectoText: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: '#94A3B8',
+    marginTop: 2,
+  },
+  gTimelineContainer: {
+    marginBottom: 10,
+  },
+  gTimelineTitle: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#64748B',
+    marginBottom: 6,
+  },
+  gStopsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+  },
+  gStopPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+  },
+  gStopName: {
+    fontSize: 10,
+    color: '#64748B',
+    fontWeight: '600',
+  },
+  gStopTime: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#0F172A',
+  },
+  gFooterRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    flexWrap: 'wrap',
+    gap: 6,
+    marginTop: 2,
+  },
+  gBadgesWrap: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+  },
+  gAttrBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    borderRadius: 6,
+    borderWidth: 1,
+  },
+  gAttrBadgeText: {
+    fontSize: 10,
+    fontWeight: '700',
+  },
+  gNotaText: {
+    fontSize: 11,
+    color: '#64748B',
+    fontStyle: 'italic',
+  },
+
+  /* ESTILOS DE BÚSQUEDA TESA / EXPREBUS */
   searchCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 24,
@@ -534,7 +1578,7 @@ const styles = StyleSheet.create({
     zIndex: 2,
   },
   searchButton: {
-    backgroundColor: '#1E3A8A',
+    backgroundColor: '#0284C7',
     borderRadius: 16,
     paddingVertical: 15,
     flexDirection: 'row',
@@ -544,7 +1588,7 @@ const styles = StyleSheet.create({
     marginTop: 18,
     ...Platform.select({
       ios: {
-        shadowColor: '#1E3A8A',
+        shadowColor: '#0284C7',
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.3,
         shadowRadius: 8,
@@ -553,7 +1597,7 @@ const styles = StyleSheet.create({
         elevation: 3,
       },
       default: {
-        shadowColor: '#1E3A8A',
+        shadowColor: '#0284C7',
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.3,
         shadowRadius: 8,
@@ -574,7 +1618,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
   },
   resultsTitle: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: '700',
     color: '#0F172A',
     letterSpacing: -0.3,
@@ -584,6 +1628,8 @@ const styles = StyleSheet.create({
     color: '#64748B',
     fontWeight: '500',
   },
+
+  /* TARJETA TESA / EXPREBUS */
   tripCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 18,
@@ -728,7 +1774,8 @@ const styles = StyleSheet.create({
     marginTop: 4,
     maxWidth: 280,
   },
-  /* Modal Styles */
+
+  /* MODAL */
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
