@@ -1,7 +1,7 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { collection, onSnapshot, doc, deleteDoc } from 'firebase/firestore';
 import { db } from '../config/firebase';
-import { CATEGORIAS_OFICIOS, CategoriaOficio, Trabajador } from '../data/oficios';
+import { CATEGORIAS_OFICIOS, CategoriaOficio, Trabajador, TRABAJADORES_PRUEBA } from '../data/oficios';
 
 interface OficiosContextType {
   categorias: CategoriaOficio[];
@@ -11,8 +11,8 @@ interface OficiosContextType {
   agregarCategoria: (c: CategoriaOficio) => void;
   eliminarCategoria: (id: string) => void;
   cargando: boolean;
-  limpiarMemoria?: () => void;
-  restaurarPrueba?: () => void;
+  limpiarMemoria: () => void;
+  restaurarPrueba: () => void;
 }
 
 const OficiosContext = createContext<OficiosContextType | undefined>(undefined);
@@ -60,16 +60,21 @@ export const OficiosProvider = ({ children }: { children: React.ReactNode }) => 
     try {
       await deleteDoc(doc(db, 'oficios', id));
     } catch (error) {
-      console.error('Error al eliminar oficio de Firestore:', error);
-      throw error;
+      console.warn('Error al eliminar oficio de Firestore, eliminando localmente:', error);
     }
+    setTrabajadores((prev) => prev.filter((item) => item.id !== id));
   };
 
   const agregarCategoria = (c: CategoriaOficio) => setCategorias((prev) => [...prev, c]);
   const eliminarCategoria = (id: string) => setCategorias((prev) => prev.filter((c) => c.id !== id));
 
-  const limpiarMemoria = () => {};
-  const restaurarPrueba = () => {};
+  const limpiarMemoria = () => {
+    setTrabajadores([]);
+  };
+
+  const restaurarPrueba = () => {
+    setTrabajadores(TRABAJADORES_PRUEBA);
+  };
 
   return (
     <OficiosContext.Provider
