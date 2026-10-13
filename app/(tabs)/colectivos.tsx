@@ -30,6 +30,9 @@ import {
   ServicioSarmientosVuelta,
   ServicioAgudosHaciaAguilares,
   ServicioAgudosDesdeAguilares,
+  GUTIERREZ_CALERA_DATA,
+  ServicioCaleraIda,
+  ServicioCaleraVuelta,
 } from '@/constants/gutierrez';
 
 type EmpresaTipo = 'TESA' | 'Exprebus' | 'Gutierrez';
@@ -80,10 +83,12 @@ const RAMALES_GUTIERREZ: {
   { id: 'alpachiri', label: 'Alpachiri / P. Grande', icon: 'trail-sign-outline' },
   { id: 'sarmientos', label: 'Aguilares / Sarmientos / M. Bello', icon: 'git-branch-outline' },
   { id: 'agudos', label: 'Los Agudos / Aguilares', icon: 'map-outline' },
+  { id: 'calera', label: 'Alto Verde / La Calera', icon: 'compass-outline' },
 ];
 
 // Devuelve el cuadro del día para el ramal activo (misma forma { ida, vuelta })
 function getCuadroGutierrezDia(ramal: RamalGutierrez, dia: TipoDiaGutierrez) {
+  if (ramal === 'calera') return GUTIERREZ_CALERA_DATA[dia];
   if (ramal === 'agudos') {
     return {
       ida: dia === 'habiles' ? GUTIERREZ_AGUDOS_DATA.haciaAguilares : [],
@@ -204,6 +209,9 @@ function getDestinoBadgeStyle(destino?: string | null) {
   if (d.includes('agudos')) {
     return { backgroundColor: '#FEF3C7', borderColor: '#FDE68A' };
   }
+  if (d.includes('alto verde')) {
+    return { backgroundColor: '#ECFDF5', borderColor: '#A7F3D0' };
+  }
   return { backgroundColor: '#F8FAFC', borderColor: '#E2E8F0' };
 }
 
@@ -228,6 +236,7 @@ function getDestinoBadgeColor(destino?: string | null) {
   if (d.includes('sarmientos')) return '#A16207';
   if (d.includes('aguilares')) return '#0E7490';
   if (d.includes('agudos')) return '#B45309';
+  if (d.includes('alto verde')) return '#047857';
   return '#334155';
 }
 
@@ -337,7 +346,9 @@ export default function ColectivosScreen() {
 
   const cantidadSalidasGutierrez = getCuadroGutierrezDia(ramalGutierrez, tipoDiaGutierrez).ida.length;
   const vigenciaGutierrez =
-    ramalGutierrez === 'agudos'
+    ramalGutierrez === 'calera'
+      ? GUTIERREZ_CALERA_DATA.vigencia
+      : ramalGutierrez === 'agudos'
       ? GUTIERREZ_AGUDOS_DATA.vigencia
       : ramalGutierrez === 'sarmientos'
       ? GUTIERREZ_SARMIENTOS_DATA.vigencia
@@ -347,6 +358,22 @@ export default function ColectivosScreen() {
 
   // Filtrado reactivo de viajes para Gutiérrez según ramal, tipo de día y búsqueda
   const viajesGutierrezFiltrados = useMemo(() => {
+    // Ramal Alto Verde / La Calera
+    if (ramalGutierrez === 'calera') {
+      const cuadroCal = GUTIERREZ_CALERA_DATA[tipoDiaGutierrez];
+      const listaCal: any[] = direccionGutierrez === 'ida' ? cuadroCal.ida : cuadroCal.vuelta;
+      const termCal = normalizarTexto(busquedaGutierrez.trim());
+      if (!termCal) return listaCal;
+
+      return listaCal.filter((item) => {
+        const valores = Object.values(item)
+          .filter((v) => typeof v === 'string')
+          .join(' ');
+        const extra = ' concepcion alto verde la calera alpachiri italia colon terminal';
+        return normalizarTexto(valores + extra).includes(termCal);
+      });
+    }
+
     // Ramal Los Agudos / Aguilares
     if (ramalGutierrez === 'agudos') {
       if (tipoDiaGutierrez !== 'habiles') return [];
@@ -542,7 +569,9 @@ export default function ColectivosScreen() {
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={styles.gutierrezLineTitle}>
-                  {ramalGutierrez === 'agudos'
+                  {ramalGutierrez === 'calera'
+                    ? GUTIERREZ_CALERA_DATA.linea
+                    : ramalGutierrez === 'agudos'
                     ? GUTIERREZ_AGUDOS_DATA.linea
                     : ramalGutierrez === 'sarmientos'
                     ? tipoDiaGutierrez === 'domingos'
@@ -687,7 +716,11 @@ export default function ColectivosScreen() {
                   ]}
                   numberOfLines={2}
                 >
-                  {ramalGutierrez === 'agudos'
+                  {ramalGutierrez === 'calera'
+                    ? tipoDiaGutierrez === 'domingos'
+                      ? 'Concepción (Italia y Colón) ➔ Vía Alpachiri ➔ La Calera'
+                      : 'Concepción ➔ Alto Verde / Alpachiri ➔ La Calera'
+                    : ramalGutierrez === 'agudos'
                     ? 'Los Agudos / Concepción ➔ Entrada Medinas ➔ Aguilares'
                     : ramalGutierrez === 'sarmientos'
                     ? tipoDiaGutierrez === 'domingos'
@@ -734,7 +767,11 @@ export default function ColectivosScreen() {
                   ]}
                   numberOfLines={2}
                 >
-                  {ramalGutierrez === 'agudos'
+                  {ramalGutierrez === 'calera'
+                    ? tipoDiaGutierrez === 'domingos'
+                      ? 'La Calera ➔ Por Alto Verde ➔ Concepción'
+                      : 'La Calera ➔ Alto Verde / Alpachiri ➔ Concepción'
+                    : ramalGutierrez === 'agudos'
                     ? 'Aguilares ➔ Entrada Medinas ➔ Los Agudos / Concepción'
                     : ramalGutierrez === 'sarmientos'
                     ? tipoDiaGutierrez === 'domingos'
@@ -759,7 +796,9 @@ export default function ColectivosScreen() {
               <TextInput
                 style={styles.searchInput}
                 placeholder={
-                  ramalGutierrez === 'agudos'
+                  ramalGutierrez === 'calera'
+                    ? 'Buscar por parada o recorrido (ej. Alto Verde, La Calera, Alpachiri...)'
+                    : ramalGutierrez === 'agudos'
                     ? 'Buscar por parada o día (ej. Los Agudos, Concepción, Entrada Medinas, Lunes...)'
                     : ramalGutierrez === 'sarmientos'
                     ? 'Buscar por parada o destino (ej. Aguilares, Sarmientos, Monte Bello...)'
@@ -787,7 +826,11 @@ export default function ColectivosScreen() {
           {/* Título de Resultados de Gutiérrez */}
           <View style={styles.resultsHeader}>
             <Text style={styles.resultsTitle}>
-              {ramalGutierrez === 'agudos'
+              {ramalGutierrez === 'calera'
+                ? direccionGutierrez === 'ida'
+                  ? 'Salidas hacia La Calera'
+                  : 'Salidas hacia Concepción'
+                : ramalGutierrez === 'agudos'
                 ? direccionGutierrez === 'ida'
                   ? 'Salidas hacia Aguilares'
                   : 'Salidas desde Aguilares'
@@ -2339,6 +2382,298 @@ export default function ColectivosScreen() {
     );
   };
 
+  // ===== Ramal Concepción / Alto Verde / La Calera =====
+  const caleraIdCorto = (id: string) =>
+    id
+      .replace(/^gac-h-i-/, 'H-CAL-')
+      .replace(/^gac-h-v-/, 'H-CAL-V-')
+      .replace(/^gac-s-i-/, 'S-CAL-')
+      .replace(/^gac-s-v-/, 'S-CAL-V-')
+      .replace(/^gac-d-i-/, 'D-CAL-')
+      .replace(/^gac-d-v-/, 'D-CAL-V-');
+
+  // Ida: Salida Concepción (Terminal o Italia y Colón) ➔ Paso Alto Verde ➔ Llegada La Calera
+  const renderCaleraCardIda = (item: ServicioCaleraIda) => {
+    const iniciaEnTerminal = !!item.salidaTerminal;
+    const horaSalida = item.salidaTerminal || item.salidaItaliaColon || '';
+    const lugarSalida = iniciaEnTerminal ? 'Terminal' : 'Italia y Colón';
+    const esPorAlpachiri =
+      item.badge === 'Por Alpachiri' ||
+      item.llegadaCalera === 'Por Alpachiri' ||
+      !item.pasoAltoVerde;
+
+    return (
+      <View style={styles.gutierrezCard}>
+        {/* Cabecera */}
+        <View style={styles.gCardHeader}>
+          <View style={styles.gCardBadgeRow}>
+            <View style={styles.gEmpresaBadge}>
+              <FontAwesome name="bus" size={11} color="#0284C7" />
+              <Text style={styles.gEmpresaText}>Gutiérrez</Text>
+            </View>
+            <Text style={styles.gIdText}>#{caleraIdCorto(item.id)}</Text>
+          </View>
+
+          <View
+            style={[
+              styles.gDestinoBadge,
+              esPorAlpachiri
+                ? { backgroundColor: '#E0F2FE', borderColor: '#7DD3FC' }
+                : { backgroundColor: '#ECFDF5', borderColor: '#A7F3D0' },
+            ]}
+          >
+            <Ionicons
+              name={esPorAlpachiri ? 'trail-sign' : 'location-sharp'}
+              size={12}
+              color={esPorAlpachiri ? '#0369A1' : '#047857'}
+            />
+            <Text
+              style={[
+                styles.gDestinoBadgeText,
+                { color: esPorAlpachiri ? '#0369A1' : '#047857' },
+              ]}
+            >
+              {esPorAlpachiri ? 'Por Alpachiri' : 'Alto Verde'}
+            </Text>
+          </View>
+        </View>
+
+        {/* Horarios principales */}
+        <View style={styles.gTimeRow}>
+          <View style={styles.gTimeCol}>
+            <Text style={styles.gTimeLabel}>Salida Concepción</Text>
+            <Text style={styles.gTimeMain}>{horaSalida}</Text>
+            <Text style={styles.gTimeSub}>{lugarSalida}</Text>
+          </View>
+
+          <View style={styles.gArrowCol}>
+            <Ionicons name="arrow-forward" size={18} color="#94A3B8" />
+            <Text style={styles.gDirectoText}>
+              {esPorAlpachiri ? 'Vía Alpachiri' : 'A La Calera'}
+            </Text>
+          </View>
+
+          <View style={[styles.gTimeCol, { alignItems: 'flex-end' }]}>
+            <Text style={styles.gTimeLabel}>Llegada La Calera</Text>
+            <Text style={[styles.gTimeMain, { color: '#0F172A' }]}>
+              {item.llegadaCalera}
+            </Text>
+            <Text style={styles.gTimeSub}>
+              {esPorAlpachiri ? 'Recorrido Alpachiri' : 'La Calera'}
+            </Text>
+          </View>
+        </View>
+
+        {/* Recorrido y tiempos de paso */}
+        <View style={styles.gTimelineContainer}>
+          <Text style={styles.gTimelineTitle}>Recorrido y tiempos de paso:</Text>
+          <View style={styles.gStopsRow}>
+            {iniciaEnTerminal && (
+              <View style={[styles.gStopPill, { backgroundColor: '#EFF6FF', borderColor: '#BFDBFE' }]}>
+                <Text style={[styles.gStopName, { color: '#1E40AF' }]}>Terminal</Text>
+                <Text style={[styles.gStopTime, { color: '#1E40AF' }]}>{item.salidaTerminal}</Text>
+              </View>
+            )}
+            {item.salidaItaliaColon ? (
+              <View style={styles.gStopPill}>
+                <Text style={styles.gStopName}>It. y Colón</Text>
+                <Text style={styles.gStopTime}>{item.salidaItaliaColon}</Text>
+              </View>
+            ) : null}
+            {item.pasoAltoVerde ? (
+              <View style={[styles.gStopPill, { backgroundColor: '#ECFDF5', borderColor: '#A7F3D0' }]}>
+                <Text style={[styles.gStopName, { color: '#047857' }]}>Alto Verde</Text>
+                <Text style={[styles.gStopTime, { color: '#047857' }]}>{item.pasoAltoVerde}</Text>
+              </View>
+            ) : (
+              <View style={[styles.gStopPill, { backgroundColor: '#E0F2FE', borderColor: '#BAE6FD' }]}>
+                <Text style={[styles.gStopName, { color: '#0369A1' }]}>Vía Alpachiri</Text>
+                <Text style={[styles.gStopTime, { color: '#0369A1' }]}>Directo</Text>
+              </View>
+            )}
+            <View
+              style={[
+                styles.gStopPill,
+                esPorAlpachiri
+                  ? { backgroundColor: '#E0F2FE', borderColor: '#7DD3FC' }
+                  : { backgroundColor: '#FDF4FF', borderColor: '#F5D0FE' },
+              ]}
+            >
+              <Text
+                style={[
+                  styles.gStopName,
+                  { color: esPorAlpachiri ? '#0369A1' : '#A21CAF' },
+                ]}
+              >
+                La Calera
+              </Text>
+              <Text
+                style={[
+                  styles.gStopTime,
+                  { color: esPorAlpachiri ? '#0369A1' : '#A21CAF' },
+                ]}
+              >
+                {item.llegadaCalera}
+              </Text>
+            </View>
+          </View>
+        </View>
+
+        {/* Badges y notas */}
+        <View style={styles.gFooterRow}>
+          <View style={styles.gBadgesWrap}>
+            {iniciaEnTerminal && (
+              <View style={[styles.gAttrBadge, { backgroundColor: '#EFF6FF', borderColor: '#BFDBFE' }]}>
+                <Ionicons name="bus-outline" size={11} color="#1E40AF" />
+                <Text style={[styles.gAttrBadgeText, { color: '#1E40AF' }]}>
+                  Inicia en Terminal
+                </Text>
+              </View>
+            )}
+            {esPorAlpachiri ? (
+              <View style={[styles.gAttrBadge, { backgroundColor: '#E0F2FE', borderColor: '#7DD3FC' }]}>
+                <Ionicons name="trail-sign-outline" size={11} color="#0369A1" />
+                <Text style={[styles.gAttrBadgeText, { color: '#0369A1' }]}>
+                  Por Alpachiri
+                </Text>
+              </View>
+            ) : (
+              <View style={[styles.gAttrBadge, { backgroundColor: '#ECFDF5', borderColor: '#A7F3D0' }]}>
+                <Ionicons name="navigate-outline" size={11} color="#047857" />
+                <Text style={[styles.gAttrBadgeText, { color: '#047857' }]}>
+                  Por Alto Verde
+                </Text>
+              </View>
+            )}
+          </View>
+
+          {item.nota && <Text style={styles.gNotaText}>{item.nota}</Text>}
+        </View>
+      </View>
+    );
+  };
+
+  // Vuelta: Salida La Calera ➔ Paso Alto Verde ➔ Llegada Concepción
+  const renderCaleraCardVuelta = (item: ServicioCaleraVuelta) => {
+    const esPorAlpachiri =
+      item.badge === 'Por Alpachiri' ||
+      item.llegadaConcepcion === 'Por Alpachiri' ||
+      !item.pasoAltoVerde;
+
+    return (
+      <View style={styles.gutierrezCard}>
+        {/* Cabecera */}
+        <View style={styles.gCardHeader}>
+          <View style={styles.gCardBadgeRow}>
+            <View style={styles.gEmpresaBadge}>
+              <FontAwesome name="bus" size={11} color="#0284C7" />
+              <Text style={styles.gEmpresaText}>Gutiérrez</Text>
+            </View>
+            <Text style={styles.gIdText}>#{caleraIdCorto(item.id)}</Text>
+          </View>
+
+          <View
+            style={[
+              styles.gDestinoBadge,
+              esPorAlpachiri
+                ? { backgroundColor: '#E0F2FE', borderColor: '#7DD3FC' }
+                : { backgroundColor: '#ECFDF5', borderColor: '#A7F3D0' },
+            ]}
+          >
+            <Ionicons
+              name={esPorAlpachiri ? 'trail-sign' : 'navigate-circle'}
+              size={12}
+              color={esPorAlpachiri ? '#0369A1' : '#047857'}
+            />
+            <Text
+              style={[
+                styles.gDestinoBadgeText,
+                { color: esPorAlpachiri ? '#0369A1' : '#047857' },
+              ]}
+            >
+              {esPorAlpachiri ? 'Por Alpachiri' : 'Alto Verde'}
+            </Text>
+          </View>
+        </View>
+
+        {/* Horarios principales */}
+        <View style={styles.gTimeRow}>
+          <View style={styles.gTimeCol}>
+            <Text style={styles.gTimeLabel}>Salida La Calera</Text>
+            <Text style={styles.gTimeMain}>{item.salidaCalera}</Text>
+            <Text style={styles.gTimeSub}>La Calera</Text>
+          </View>
+
+          <View style={styles.gArrowCol}>
+            <Ionicons name="arrow-forward" size={18} color="#94A3B8" />
+            <Text style={styles.gDirectoText}>
+              {esPorAlpachiri ? 'Vía Alpachiri' : 'A Concepción'}
+            </Text>
+          </View>
+
+          <View style={[styles.gTimeCol, { alignItems: 'flex-end' }]}>
+            <Text style={styles.gTimeLabel}>Llegada Concepción</Text>
+            <Text style={[styles.gTimeMain, { color: '#0F172A' }]}>
+              {item.llegadaConcepcion}
+            </Text>
+            <Text style={styles.gTimeSub}>
+              {esPorAlpachiri ? 'Regreso vía Alpachiri' : 'Concepción Centro'}
+            </Text>
+          </View>
+        </View>
+
+        {/* Recorrido y tiempos de paso */}
+        <View style={styles.gTimelineContainer}>
+          <Text style={styles.gTimelineTitle}>Recorrido y tiempos de paso:</Text>
+          <View style={styles.gStopsRow}>
+            <View style={[styles.gStopPill, { backgroundColor: '#FDF4FF', borderColor: '#F5D0FE' }]}>
+              <Text style={[styles.gStopName, { color: '#A21CAF' }]}>La Calera</Text>
+              <Text style={[styles.gStopTime, { color: '#A21CAF' }]}>{item.salidaCalera}</Text>
+            </View>
+            {item.pasoAltoVerde ? (
+              <View style={[styles.gStopPill, { backgroundColor: '#ECFDF5', borderColor: '#A7F3D0' }]}>
+                <Text style={[styles.gStopName, { color: '#047857' }]}>Alto Verde</Text>
+                <Text style={[styles.gStopTime, { color: '#047857' }]}>{item.pasoAltoVerde}</Text>
+              </View>
+            ) : (
+              <View style={[styles.gStopPill, { backgroundColor: '#E0F2FE', borderColor: '#BAE6FD' }]}>
+                <Text style={[styles.gStopName, { color: '#0369A1' }]}>Vía Alpachiri</Text>
+                <Text style={[styles.gStopTime, { color: '#0369A1' }]}>Regreso</Text>
+              </View>
+            )}
+            <View style={[styles.gStopPill, { backgroundColor: '#F1F5F9', borderColor: '#E2E8F0' }]}>
+              <Text style={styles.gStopName}>Concepción</Text>
+              <Text style={styles.gStopTime}>{item.llegadaConcepcion}</Text>
+            </View>
+          </View>
+        </View>
+
+        {/* Badges y notas */}
+        <View style={styles.gFooterRow}>
+          <View style={styles.gBadgesWrap}>
+            {esPorAlpachiri ? (
+              <View style={[styles.gAttrBadge, { backgroundColor: '#E0F2FE', borderColor: '#7DD3FC' }]}>
+                <Ionicons name="trail-sign-outline" size={11} color="#0369A1" />
+                <Text style={[styles.gAttrBadgeText, { color: '#0369A1' }]}>
+                  Por Alpachiri
+                </Text>
+              </View>
+            ) : (
+              <View style={[styles.gAttrBadge, { backgroundColor: '#ECFDF5', borderColor: '#A7F3D0' }]}>
+                <Ionicons name="navigate-outline" size={11} color="#047857" />
+                <Text style={[styles.gAttrBadgeText, { color: '#047857' }]}>
+                  Por Alto Verde
+                </Text>
+              </View>
+            )}
+          </View>
+
+          {item.nota && <Text style={styles.gNotaText}>{item.nota}</Text>}
+        </View>
+      </View>
+    );
+  };
+
   // Render Component para TESA / Exprebus
   const renderItemTradicional = ({ item }: { item: Viaje }) => {
     const horaSalida = item.paradas?.[origen];
@@ -2458,7 +2793,11 @@ export default function ColectivosScreen() {
           data={viajesGutierrezFiltrados as any}
           keyExtractor={(item: any) => item.id}
           renderItem={({ item }) =>
-            ramalGutierrez === 'agudos'
+            ramalGutierrez === 'calera'
+              ? direccionGutierrez === 'ida'
+                ? renderCaleraCardIda(item)
+                : renderCaleraCardVuelta(item)
+              : ramalGutierrez === 'agudos'
               ? direccionGutierrez === 'ida'
                 ? renderAgudosCardHaciaAguilares(item)
                 : renderAgudosCardDesdeAguilares(item)
@@ -2893,7 +3232,8 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   ramalTab: {
-    width: '48.5%',
+    flex: 1,
+    minWidth: '47%',
     flexDirection: 'column',
     alignItems: 'center',
     justifyContent: 'center',

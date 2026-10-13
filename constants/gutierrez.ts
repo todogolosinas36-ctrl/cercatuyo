@@ -2,6 +2,7 @@ import gutierrezData from '../data/colectivos/gutierrez.json';
 import gutierrezAlpachiriData from '../data/colectivos/gutierrez-alpachiri.json';
 import gutierrezSarmientosData from '../data/colectivos/gutierrez-sarmientos.json';
 import gutierrezAgudosData from '../data/colectivos/gutierrez-agudos.json';
+import gutierrezCaleraData from '../data/colectivos/gutierrez-calera-altoverde.json';
 
 export type TipoDiaGutierrez = 'habiles' | 'sabados' | 'domingos';
 
@@ -51,7 +52,7 @@ export const GUTIERREZ_DATA: CuadroGutierrez = gutierrezData as unknown as Cuadr
 export default GUTIERREZ_DATA;
 
 // ===== Ramal Alpachiri / Piedra Grande =====
-export type RamalGutierrez = 'medinas' | 'alpachiri' | 'sarmientos' | 'agudos';
+export type RamalGutierrez = 'medinas' | 'alpachiri' | 'sarmientos' | 'agudos' | 'calera';
 
 export interface ServicioAlpachiriIda {
   id: string;
@@ -177,3 +178,41 @@ export interface CuadroAgudos {
 
 export const GUTIERREZ_AGUDOS_DATA: CuadroAgudos =
   gutierrezAgudosData as unknown as CuadroAgudos;
+
+// ===== Ramal Concepción / Alto Verde / La Calera =====
+export interface ServicioCaleraIda {
+  id: string;
+  salidaTerminal?: string | null;
+  salidaItaliaColon?: string | null;
+  pasoAltoVerde?: string | null;
+  llegadaCalera: string;
+  badge?: string | null;
+  nota?: string | null;
+}
+
+export interface ServicioCaleraVuelta {
+  id: string;
+  salidaCalera: string;
+  pasoAltoVerde?: string | null;
+  llegadaConcepcion: string;
+  badge?: string | null;
+  nota?: string | null;
+}
+
+export interface CuadroDiaCalera {
+  ida: ServicioCaleraIda[];
+  vuelta: ServicioCaleraVuelta[];
+}
+
+export interface CuadroCalera {
+  empresa: string;
+  ramal: string;
+  linea: string;
+  vigencia: string;
+  habiles: CuadroDiaCalera;
+  sabados: CuadroDiaCalera;
+  domingos: CuadroDiaCalera;
+}
+
+export const GUTIERREZ_CALERA_DATA: CuadroCalera =
+  gutierrezCaleraData as unknown as CuadroCalera;

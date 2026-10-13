@@ -1,0 +1,54 @@
+{
+  "empresa": "Gutiérrez",
+  "ramal": "Alto Verde / La Calera",
+  "linea": "Concepción - Alto Verde - La Calera",
+  "vigencia": "Desde 27/07/2026",
+  "habiles": {
+    "ida": [
+      { "id": "gac-h-i-1", "salidaTerminal": null, "salidaItaliaColon": "05:10", "pasoAltoVerde": null, "llegadaCalera": "Por Alpachiri", "badge": "Por Alpachiri", "nota": "Recorrido vía Alpachiri" },
+      { "id": "gac-h-i-2", "salidaTerminal": null, "salidaItaliaColon": "06:10", "pasoAltoVerde": null, "llegadaCalera": "Por Alpachiri", "badge": "Por Alpachiri", "nota": "Recorrido vía Alpachiri" },
+      { "id": "gac-h-i-3", "salidaTerminal": "06:40", "salidaItaliaColon": "06:50", "pasoAltoVerde": "07:10", "llegadaCalera": "07:50", "badge": "Alto Verde", "nota": "Directo por Alto Verde" },
+      { "id": "gac-h-i-4", "salidaTerminal": "11:05", "salidaItaliaColon": "11:15", "pasoAltoVerde": "11:45", "llegadaCalera": "12:10", "badge": "Alto Verde", "nota": "Directo por Alto Verde" },
+      { "id": "gac-h-i-5", "salidaTerminal": "11:50", "salidaItaliaColon": "12:00", "pasoAltoVerde": "12:30", "llegadaCalera": "12:55", "badge": "Alto Verde", "nota": "Directo por Alto Verde" },
+      { "id": "gac-h-i-6", "salidaTerminal": "13:10", "salidaItaliaColon": "13:20", "pasoAltoVerde": "13:40", "llegadaCalera": "14:20", "badge": "Alto Verde", "nota": "Directo por Alto Verde" },
+      { "id": "gac-h-i-7", "salidaTerminal": null, "salidaItaliaColon": "15:10", "pasoAltoVerde": null, "llegadaCalera": "Por Alpachiri", "badge": "Por Alpachiri", "nota": "Recorrido vía Alpachiri" },
+      { "id": "gac-h-i-8", "salidaTerminal": "18:20", "salidaItaliaColon": "18:30", "pasoAltoVerde": "18:50", "llegadaCalera": "19:30", "badge": "Alto Verde", "nota": "Directo por Alto Verde" },
+      { "id": "gac-h-i-9", "salidaTerminal": "20:30", "salidaItaliaColon": "20:40", "pasoAltoVerde": "21:00", "llegadaCalera": "21:40", "badge": "Alto Verde", "nota": "Último servicio por Alto Verde" }
+    ],
+    "vuelta": [
+      { "id": "gac-h-v-1", "salidaCalera": "05:40", "pasoAltoVerde": "06:20", "llegadaConcepcion": "06:40", "badge": "Alto Verde", "nota": "Por Alto Verde" },
+      { "id": "gac-h-v-2", "salidaCalera": "06:40", "pasoAltoVerde": "07:10", "llegadaConcepcion": "07:40", "badge": "Alto Verde", "nota": "Por Alto Verde" },
+      { "id": "gac-h-v-3", "salidaCalera": "07:50", "pasoAltoVerde": "08:25", "llegadaConcepcion": "08:50", "badge": "Alto Verde", "nota": "Por Alto Verde" },
+      { "id": "gac-h-v-4", "salidaCalera": "12:10", "pasoAltoVerde": "12:40", "llegadaConcepcion": "13:10", "badge": "Alto Verde", "nota": "Por Alto Verde" },
+      { "id": "gac-h-v-5", "salidaCalera": "13:00", "pasoAltoVerde": "13:35", "llegadaConcepcion": "14:00", "badge": "Alto Verde", "nota": "Por Alto Verde" },
+      { "id": "gac-h-v-6", "salidaCalera": "14:20", "pasoAltoVerde": null, "llegadaConcepcion": "Por Alpachiri", "badge": "Por Alpachiri", "nota": "Regreso vía Alpachiri" },
+      { "id": "gac-h-v-7", "salidaCalera": "15:55", "pasoAltoVerde": "16:30", "llegadaConcepcion": "16:55", "badge": "Alto Verde", "nota": "Por Alto Verde" },
+      { "id": "gac-h-v-8", "salidaCalera": "19:30", "pasoAltoVerde": "20:10", "llegadaConcepcion": "20:30", "badge": "Alto Verde", "nota": "Por Alto Verde" },
+      { "id": "gac-h-v-9", "salidaCalera": "21:40", "pasoAltoVerde": null, "llegadaConcepcion": "Por Alpachiri", "badge": "Por Alpachiri", "nota": "Última vuelta vía Alpachiri" }
+    ]
+  },
+  "sabados": {
+    "ida": [
+      { "id": "gac-s-i-1", "salidaTerminal": "06:50", "salidaItaliaColon": "07:00", "pasoAltoVerde": "07:20", "llegadaCalera": "07:50", "badge": "Alto Verde", "nota": null },
+      { "id": "gac-s-i-2", "salidaTerminal": "11:05", "salidaItaliaColon": "11:15", "pasoAltoVerde": "11:45", "llegadaCalera": "12:10", "badge": "Alto Verde", "nota": null },
+      { "id": "gac-s-i-3", "salidaTerminal": "13:10", "salidaItaliaColon": "13:20", "pasoAltoVerde": "13:40", "llegadaCalera": "14:15", "badge": "Alto Verde", "nota": null },
+      { "id": "gac-s-i-4", "salidaTerminal": "20:30", "salidaItaliaColon": "20:40", "pasoAltoVerde": "21:00", "llegadaCalera": "21:40", "badge": "Alto Verde", "nota": "Último servicio del sábado" }
+    ],
+    "vuelta": [
+      { "id": "gac-s-v-1", "salidaCalera": "07:55", "pasoAltoVerde": "08:20", "llegadaConcepcion": "08:50", "badge": "Alto Verde", "nota": "Por Alto Verde" },
+      { "id": "gac-s-v-2", "salidaCalera": "12:10", "pasoAltoVerde": "12:40", "llegadaConcepcion": "13:05", "badge": "Alto Verde", "nota": "Por Alto Verde" },
+      { "id": "gac-s-v-3", "salidaCalera": "15:50", "pasoAltoVerde": "16:20", "llegadaConcepcion": "16:45", "badge": "Alto Verde", "nota": "Por Alto Verde" },
+      { "id": "gac-s-v-4", "salidaCalera": "21:40", "pasoAltoVerde": null, "llegadaConcepcion": "Por Alpachiri", "badge": "Por Alpachiri", "nota": "Regreso vía Alpachiri" }
+    ]
+  },
+  "domingos": {
+    "ida": [
+      { "id": "gac-d-i-1", "salidaItaliaColon": "09:00", "llegadaCalera": "Por Alpachiri", "badge": "Por Alpachiri", "nota": "Ida dominical vía Alpachiri" },
+      { "id": "gac-d-i-2", "salidaItaliaColon": "18:30", "llegadaCalera": "Por Alpachiri", "badge": "Por Alpachiri", "nota": "Ida dominical vía Alpachiri" }
+    ],
+    "vuelta": [
+      { "id": "gac-d-v-1", "salidaCalera": "09:35", "pasoAltoVerde": "10:15", "llegadaConcepcion": "10:35", "badge": "Por Alto Verde", "nota": "Regreso dominical por Alto Verde" },
+      { "id": "gac-d-v-2", "salidaCalera": "19:20", "pasoAltoVerde": "20:00", "llegadaConcepcion": "20:20", "badge": "Por Alto Verde", "nota": "Último regreso dominical por Alto Verde" }
+    ]
+  }
+}
