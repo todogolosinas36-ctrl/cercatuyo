@@ -17,6 +17,7 @@ import { router } from 'expo-router';
 import { TODOS_LOS_VIAJES, PRECIOS_TESA, Viaje } from '@/data/horarios';
 import {
   GUTIERREZ_DATA,
+  TipoDiaGutierrez,
   ServicioGutierrezIda,
   ServicioGutierrezVuelta,
 } from '@/constants/gutierrez';
@@ -52,6 +53,12 @@ const EMPRESAS: { id: EmpresaTipo; label: string }[] = [
   { id: 'TESA', label: 'TESA' },
   { id: 'Exprebus', label: 'Exprebus' },
   { id: 'Gutierrez', label: 'Gutiérrez (Interurbano)' },
+];
+
+const DIAS_GUTIERREZ: { id: TipoDiaGutierrez; label: string; badge: string }[] = [
+  { id: 'habiles', label: 'Lunes a Viernes', badge: '28 serv.' },
+  { id: 'sabados', label: 'Sábados', badge: '9 serv.' },
+  { id: 'domingos', label: 'Domingos y Feriados', badge: '3 serv.' },
 ];
 
 // Función auxiliar para calcular duración estimada entre dos horas formato HH:mm
@@ -146,11 +153,21 @@ export default function ColectivosScreen() {
   const [seleccionando, setSeleccionando] = useState<'origen' | 'destino' | 'dia'>('origen');
 
   // Estados específicos para Empresa Gutiérrez
+  const [tipoDiaGutierrez, setTipoDiaGutierrez] = useState<TipoDiaGutierrez>('habiles');
   const [direccionGutierrez, setDireccionGutierrez] = useState<DireccionGutierrez>('ida');
   const [busquedaGutierrez, setBusquedaGutierrez] = useState('');
 
+  // Preselección automática del día actual de la semana (SSR compatible)
   useEffect(() => {
     setIsMounted(true);
+    const diaSemana = new Date().getDay(); // 0: Domingo, 6: Sábado, 1-5: Lunes a Viernes
+    if (diaSemana === 0) {
+      setTipoDiaGutierrez('domingos');
+    } else if (diaSemana === 6) {
+      setTipoDiaGutierrez('sabados');
+    } else {
+      setTipoDiaGutierrez('habiles');
+    }
   }, []);
 
   // Búsqueda de viajes para TESA y Exprebus
@@ -213,10 +230,16 @@ export default function ColectivosScreen() {
     setDestino(origen);
   };
 
-  // Filtrado reactivo de viajes para Gutiérrez
+  // Filtrado reactivo de viajes para Gutiérrez según tipo de día y búsqueda
   const viajesGutierrezFiltrados = useMemo(() => {
-    const lista =
-      direccionGutierrez === 'ida' ? GUTIERREZ_DATA.ida : GUTIERREZ_DATA.vuelta;
+    const cuadroDia =
+      tipoDiaGutierrez === 'sabados'
+        ? GUTIERREZ_DATA.sabados
+        : tipoDiaGutierrez === 'domingos'
+        ? GUTIERREZ_DATA.domingos
+        : GUTIERREZ_DATA.habiles;
+
+    const lista = direccionGutierrez === 'ida' ? cuadroDia.ida : cuadroDia.vuelta;
 
     if (!busquedaGutierrez.trim()) return lista;
 
@@ -230,6 +253,7 @@ export default function ColectivosScreen() {
           item.llegadaMonteagudo?.toLowerCase().includes(term) ||
           item.llegadaTrinidad?.toLowerCase().includes(term) ||
           item.salidaItaliaColon?.toLowerCase().includes(term) ||
+          item.salidaConcepcion24Colon?.toLowerCase().includes(term) ||
           item.salidaTerminal?.toLowerCase().includes(term) ||
           item.pasoTerminal?.toLowerCase().includes(term) ||
           item.nota?.toLowerCase().includes(term)
@@ -242,13 +266,14 @@ export default function ColectivosScreen() {
           item.salidaMonteagudo?.toLowerCase().includes(term) ||
           item.salidaMedinas?.toLowerCase().includes(term) ||
           item.salidaTrinidad?.toLowerCase().includes(term) ||
+          item.pasoTrinidad?.toLowerCase().includes(term) ||
           item.llegadaConcepcion?.toLowerCase().includes(term) ||
           item.llegadaTerminal?.toLowerCase().includes(term) ||
           item.nota?.toLowerCase().includes(term)
         );
       });
     }
-  }, [direccionGutierrez, busquedaGutierrez]);
+  }, [tipoDiaGutierrez, direccionGutierrez, busquedaGutierrez]);
 
   const valorActual =
     seleccionando === 'origen'
@@ -340,11 +365,56 @@ export default function ColectivosScreen() {
                 <Ionicons name="git-network-outline" size={18} color="#0284C7" />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={styles.gutierrezLineTitle}>{GUTIERREZ_DATA.linea}</Text>
+                <Text style={styles.gutierrezLineTitle}>
+                  {tipoDiaGutierrez === 'domingos'
+                    ? 'Concepción (24 y Colón) – La Trinidad – Medinas'
+                    : GUTIERREZ_DATA.linea}
+                </Text>
                 <Text style={styles.gutierrezLineSubtitle}>
-                  {GUTIERREZ_DATA.tipoDia} • Vigencia: {GUTIERREZ_DATA.vigencia}
+                  {tipoDiaGutierrez === 'habiles' && 'Días Hábiles (Lunes a Viernes) • 28 salidas'}
+                  {tipoDiaGutierrez === 'sabados' && 'Sábados • 9 salidas'}
+                  {tipoDiaGutierrez === 'domingos' && 'Domingos y Feriados • 3 salidas'}
+                  {' • Vigencia: ' + GUTIERREZ_DATA.vigencia}
                 </Text>
               </View>
+            </View>
+          </View>
+
+          {/* SELECTOR DE TIPO DE DÍA PARA GUTIÉRREZ */}
+          <View style={styles.daySelectorWrapper}>
+            <Text style={styles.selectorSectionLabel}>Día de Servicio:</Text>
+            <View style={styles.daySelectorRow}>
+              {DIAS_GUTIERREZ.map((diaItem) => {
+                const isActive = tipoDiaGutierrez === diaItem.id;
+                return (
+                  <TouchableOpacity
+                    key={diaItem.id}
+                    style={[
+                      styles.dayButton,
+                      isActive && styles.dayButtonActive,
+                    ]}
+                    onPress={() => setTipoDiaGutierrez(diaItem.id)}
+                    activeOpacity={0.8}
+                  >
+                    <Text
+                      style={[
+                        styles.dayButtonText,
+                        isActive && styles.dayButtonTextActive,
+                      ]}
+                    >
+                      {diaItem.label}
+                    </Text>
+                    <Text
+                      style={[
+                        styles.dayButtonBadge,
+                        isActive && styles.dayButtonBadgeActive,
+                      ]}
+                    >
+                      {diaItem.badge}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
             </View>
           </View>
 
@@ -383,7 +453,9 @@ export default function ColectivosScreen() {
                   ]}
                   numberOfLines={2}
                 >
-                  Concepción ➔ Trinidad / Medinas / Monteagudo
+                  {tipoDiaGutierrez === 'domingos'
+                    ? 'Concepción (24 y Colón) ➔ La Trinidad ➔ Medinas'
+                    : 'Concepción ➔ Trinidad / Medinas / Monteagudo'}
                 </Text>
               </TouchableOpacity>
 
@@ -418,7 +490,9 @@ export default function ColectivosScreen() {
                   ]}
                   numberOfLines={2}
                 >
-                  Monteagudo / Medinas / Trinidad ➔ Concepción
+                  {tipoDiaGutierrez === 'domingos'
+                    ? 'Medinas ➔ La Trinidad ➔ Concepción'
+                    : 'Monteagudo / Medinas / Trinidad ➔ Concepción'}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -451,7 +525,11 @@ export default function ColectivosScreen() {
           {/* Título de Resultados de Gutiérrez */}
           <View style={styles.resultsHeader}>
             <Text style={styles.resultsTitle}>
-              {direccionGutierrez === 'ida' ? 'Salidas desde Concepción' : 'Salidas hacia Concepción'}
+              {direccionGutierrez === 'ida'
+                ? tipoDiaGutierrez === 'domingos'
+                  ? 'Salidas Concepción (24 y Colón)'
+                  : 'Salidas desde Concepción'
+                : 'Salidas hacia Concepción'}
             </Text>
             <Text style={styles.resultsBadge}>
               {viajesGutierrezFiltrados.length}{' '}
@@ -549,9 +627,139 @@ export default function ColectivosScreen() {
     </View>
   );
 
-  // Render Card para Gutiérrez (Ida)
+  // Render Card Especial para Gutiérrez en DOMINGOS
+  const renderGutierrezCardDomingo = (item: any) => {
+    const esIda = direccionGutierrez === 'ida';
+
+    if (esIda) {
+      const horaSalida = item.salidaConcepcion24Colon || item.salidaItaliaColon || '--:--';
+      const horaTrinidad = item.llegadaTrinidad || '--:--';
+      const horaMedinas = item.llegadaMedinas || '--:--';
+
+      return (
+        <View style={styles.domingoCard}>
+          <View style={styles.domingoCardHeader}>
+            <View style={styles.gEmpresaBadge}>
+              <FontAwesome name="bus" size={11} color="#0284C7" />
+              <Text style={styles.gEmpresaText}>Gutiérrez • Domingo</Text>
+            </View>
+            <View style={[styles.gDestinoBadge, { backgroundColor: '#F0FDFA', borderColor: '#99F6E4' }]}>
+              <Ionicons name="location-sharp" size={12} color="#0F766E" />
+              <Text style={[styles.gDestinoBadgeText, { color: '#0F766E' }]}>Llegada Medinas</Text>
+            </View>
+          </View>
+
+          {/* Columnas específicas para Domingo (Ida) */}
+          <View style={styles.domingoColumnsRow}>
+            {/* 1. Salida Concepción (24 y Colón) */}
+            <View style={styles.domingoCol}>
+              <Text style={styles.domingoColTag}>1. Salida</Text>
+              <Text style={styles.domingoColTime}>{horaSalida}</Text>
+              <Text style={styles.domingoColPlace}>Concepción</Text>
+              <Text style={styles.domingoColSub}>24 y Colón</Text>
+            </View>
+
+            <View style={styles.domingoArrowBox}>
+              <Ionicons name="arrow-forward" size={16} color="#0284C7" />
+            </View>
+
+            {/* 2. Paso La Trinidad */}
+            <View style={styles.domingoCol}>
+              <Text style={styles.domingoColTag}>2. Paso</Text>
+              <Text style={styles.domingoColTime}>{horaTrinidad}</Text>
+              <Text style={styles.domingoColPlace}>La Trinidad</Text>
+              <Text style={styles.domingoColSub}>Parada</Text>
+            </View>
+
+            <View style={styles.domingoArrowBox}>
+              <Ionicons name="arrow-forward" size={16} color="#0284C7" />
+            </View>
+
+            {/* 3. Llegada Medinas */}
+            <View style={styles.domingoCol}>
+              <Text style={styles.domingoColTag}>3. Llegada</Text>
+              <Text style={[styles.domingoColTime, { color: '#0F766E' }]}>{horaMedinas}</Text>
+              <Text style={styles.domingoColPlace}>Medinas</Text>
+              <Text style={styles.domingoColSub}>Plaza / Centro</Text>
+            </View>
+          </View>
+
+          {item.nota && (
+            <View style={styles.domingoFooter}>
+              <Ionicons name="information-circle" size={14} color="#0284C7" />
+              <Text style={styles.domingoNotaText}>{item.nota}</Text>
+            </View>
+          )}
+        </View>
+      );
+    }
+
+    // Vuelta en Domingo: Salida Medinas ➔ Paso La Trinidad ➔ Llegada Concepción
+    const horaSalida = item.salidaMedinas || '--:--';
+    const horaTrinidad = item.salidaTrinidad || item.pasoTrinidad || '--:--';
+    const horaConcepcion = item.llegadaConcepcion || '--:--';
+
+    return (
+      <View style={styles.domingoCard}>
+        <View style={styles.domingoCardHeader}>
+          <View style={styles.gEmpresaBadge}>
+            <FontAwesome name="bus" size={11} color="#0284C7" />
+            <Text style={styles.gEmpresaText}>Gutiérrez • Domingo</Text>
+          </View>
+          <View style={[styles.gDestinoBadge, { backgroundColor: '#EFF6FF', borderColor: '#BFDBFE' }]}>
+            <Ionicons name="location-sharp" size={12} color="#1D4ED8" />
+            <Text style={[styles.gDestinoBadgeText, { color: '#1D4ED8' }]}>Llegada Concepción</Text>
+          </View>
+        </View>
+
+        {/* Columnas específicas para Domingo (Vuelta) */}
+        <View style={styles.domingoColumnsRow}>
+          {/* 1. Salida Medinas */}
+          <View style={styles.domingoCol}>
+            <Text style={styles.domingoColTag}>1. Salida</Text>
+            <Text style={[styles.domingoColTime, { color: '#0F766E' }]}>{horaSalida}</Text>
+            <Text style={styles.domingoColPlace}>Medinas</Text>
+            <Text style={styles.domingoColSub}>Plaza / Centro</Text>
+          </View>
+
+          <View style={styles.domingoArrowBox}>
+            <Ionicons name="arrow-forward" size={16} color="#0284C7" />
+          </View>
+
+          {/* 2. Paso La Trinidad */}
+          <View style={styles.domingoCol}>
+            <Text style={styles.domingoColTag}>2. Paso</Text>
+            <Text style={styles.domingoColTime}>{horaTrinidad}</Text>
+            <Text style={styles.domingoColPlace}>La Trinidad</Text>
+            <Text style={styles.domingoColSub}>Parada</Text>
+          </View>
+
+          <View style={styles.domingoArrowBox}>
+            <Ionicons name="arrow-forward" size={16} color="#0284C7" />
+          </View>
+
+          {/* 3. Llegada Concepción */}
+          <View style={styles.domingoCol}>
+            <Text style={styles.domingoColTag}>3. Llegada</Text>
+            <Text style={[styles.domingoColTime, { color: '#0284C7' }]}>{horaConcepcion}</Text>
+            <Text style={styles.domingoColPlace}>Concepción</Text>
+            <Text style={styles.domingoColSub}>24 y Colón</Text>
+          </View>
+        </View>
+
+        {item.nota && (
+          <View style={styles.domingoFooter}>
+            <Ionicons name="information-circle" size={14} color="#0284C7" />
+            <Text style={styles.domingoNotaText}>{item.nota}</Text>
+          </View>
+        )}
+      </View>
+    );
+  };
+
+  // Render Card para Gutiérrez (Ida en Hábiles y Sábados)
   const renderGutierrezCardIda = (item: ServicioGutierrezIda) => {
-    const horaSalidaPrincipal = item.salidaItaliaColon;
+    const horaSalidaPrincipal = item.salidaItaliaColon || item.salidaConcepcion24Colon || '--:--';
     const horaLlegadaPrincipal =
       item.llegadaMonteagudo || item.llegadaMedinas || item.llegadaTrinidad || '--:--';
 
@@ -575,7 +783,9 @@ export default function ColectivosScreen() {
               <FontAwesome name="bus" size={11} color="#0284C7" />
               <Text style={styles.gEmpresaText}>Gutiérrez</Text>
             </View>
-            <Text style={styles.gIdText}>#{item.id.replace('g-ida-', '')}</Text>
+            <Text style={styles.gIdText}>
+              #{item.id.replace('g-ida-', '').replace('g-sab-ida-', 'S-')}
+            </Text>
           </View>
 
           {/* Destino Final con Badge Visual */}
@@ -696,7 +906,7 @@ export default function ColectivosScreen() {
     );
   };
 
-  // Render Card para Gutiérrez (Vuelta)
+  // Render Card para Gutiérrez (Vuelta en Hábiles y Sábados)
   const renderGutierrezCardVuelta = (item: ServicioGutierrezVuelta) => {
     const horaSalidaPrincipal =
       item.salidaMonteagudo || item.salidaMedinas || item.salidaTrinidad || '--:--';
@@ -731,7 +941,9 @@ export default function ColectivosScreen() {
               <FontAwesome name="bus" size={11} color="#0284C7" />
               <Text style={styles.gEmpresaText}>Gutiérrez</Text>
             </View>
-            <Text style={styles.gIdText}>#{item.id.replace('g-vta-', '')}</Text>
+            <Text style={styles.gIdText}>
+              #{item.id.replace('g-vta-', '').replace('g-sab-vta-', 'S-')}
+            </Text>
           </View>
 
           {/* Destino Final Especial con Badge */}
@@ -923,7 +1135,7 @@ export default function ColectivosScreen() {
           <Ionicons name="search-outline" size={40} color="#CBD5E1" />
           <Text style={styles.emptyTitle}>No se encontraron salidas</Text>
           <Text style={styles.emptySubtitle}>
-            No hay viajes de la empresa Gutiérrez que coincidan con &quot;{busquedaGutierrez}&quot; para este sentido.
+            No hay viajes de la empresa Gutiérrez que coincidan con &quot;{busquedaGutierrez}&quot; para este día y sentido.
           </Text>
         </View>
       );
@@ -959,7 +1171,9 @@ export default function ColectivosScreen() {
           data={viajesGutierrezFiltrados as any}
           keyExtractor={(item: any) => item.id}
           renderItem={({ item }) =>
-            direccionGutierrez === 'ida'
+            tipoDiaGutierrez === 'domingos'
+              ? renderGutierrezCardDomingo(item)
+              : direccionGutierrez === 'ida'
               ? renderGutierrezCardIda(item)
               : renderGutierrezCardVuelta(item)
           }
@@ -1192,6 +1406,82 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
 
+  /* SELECTOR DE DÍA PARA GUTIÉRREZ */
+  daySelectorWrapper: {
+    marginBottom: 14,
+  },
+  daySelectorRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  dayButton: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 14,
+    paddingVertical: 10,
+    paddingHorizontal: 8,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.04,
+        shadowRadius: 3,
+      },
+      android: {
+        elevation: 1,
+      },
+      default: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.04,
+        shadowRadius: 3,
+      },
+    }),
+  },
+  dayButtonActive: {
+    backgroundColor: '#0284C7',
+    borderColor: '#0284C7',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#0284C7',
+        shadowOffset: { width: 0, height: 3 },
+        shadowOpacity: 0.25,
+        shadowRadius: 6,
+      },
+      android: {
+        elevation: 3,
+      },
+      default: {
+        shadowColor: '#0284C7',
+        shadowOffset: { width: 0, height: 3 },
+        shadowOpacity: 0.25,
+        shadowRadius: 6,
+      },
+    }),
+  },
+  dayButtonText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#334155',
+    textAlign: 'center',
+  },
+  dayButtonTextActive: {
+    color: '#FFFFFF',
+  },
+  dayButtonBadge: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: '#64748B',
+    marginTop: 2,
+  },
+  dayButtonBadgeActive: {
+    color: '#E0F2FE',
+  },
+
   /* SELECTOR DE DIRECCIÓN */
   directionSection: {
     marginBottom: 14,
@@ -1308,7 +1598,101 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
 
-  /* TARJETA GUTIÉRREZ */
+  /* TARJETA DOMINGOS DE GUTIÉRREZ */
+  domingoCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    padding: 16,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 3 },
+        shadowOpacity: 0.05,
+        shadowRadius: 6,
+      },
+      android: {
+        elevation: 2,
+      },
+      default: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 3 },
+        shadowOpacity: 0.05,
+        shadowRadius: 6,
+      },
+    }),
+  },
+  domingoCardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 14,
+  },
+  domingoColumnsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#F8FAFC',
+    borderRadius: 16,
+    paddingVertical: 14,
+    paddingHorizontal: 10,
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
+  },
+  domingoCol: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  domingoColTag: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#94A3B8',
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
+    marginBottom: 2,
+  },
+  domingoColTime: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: '#0284C7',
+    letterSpacing: -0.5,
+  },
+  domingoColPlace: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#1E293B',
+    marginTop: 2,
+    textAlign: 'center',
+  },
+  domingoColSub: {
+    fontSize: 10,
+    color: '#64748B',
+    marginTop: 1,
+    textAlign: 'center',
+  },
+  domingoArrowBox: {
+    paddingHorizontal: 4,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  domingoFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 12,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: '#F1F5F9',
+  },
+  domingoNotaText: {
+    fontSize: 11,
+    color: '#64748B',
+    fontStyle: 'italic',
+  },
+
+  /* TARJETA HABITUAL GUTIÉRREZ (HÁBILES Y SÁBADOS) */
   gutierrezCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 20,

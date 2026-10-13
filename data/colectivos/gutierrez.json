@@ -62,5 +62,103 @@
     { "id": "g-vta-26", "salidaMonteagudo": null, "salidaMedinas": "20:55", "salidaTrinidad": "21:05", "llegadaConcepcion": "21:30", "llegadaTerminal": "BELGRANO", "destinoEspecial": "Esc./Calle Belgrano", "nota": "Llega a Belgrano" },
     { "id": "g-vta-27", "salidaMonteagudo": null, "salidaMedinas": "22:20", "salidaTrinidad": "22:30", "llegadaConcepcion": "22:50", "llegadaTerminal": "TERMINAL", "destinoEspecial": "Terminal", "nota": "Hasta Terminal" },
     { "id": "g-vta-28", "salidaMonteagudo": "23:55 (C.C.Rey)", "salidaMedinas": null, "salidaTrinidad": "00:00", "llegadaConcepcion": "00:15", "llegadaTerminal": "TALLER", "destinoEspecial": "Taller", "nota": "Directo a taller" }
-  ]
+  ],
+  "habiles": {
+    "ida": [
+      { "id": "g-ida-1", "salidaTerminal": null, "salidaItaliaColon": "06:00", "pasoTerminal": null, "llegadaTrinidad": "06:25", "llegadaMedinas": null, "llegadaMonteagudo": null, "destinoFinal": "Santa Rita", "nota": "Termina en Sta. Rita" },
+      { "id": "g-ida-2", "salidaTerminal": null, "salidaItaliaColon": "06:20", "pasoTerminal": null, "llegadaTrinidad": "06:45", "llegadaMedinas": null, "llegadaMonteagudo": "07:10", "destinoFinal": "Monteagudo", "nota": null },
+      { "id": "g-ida-3", "salidaTerminal": "06:25", "salidaItaliaColon": "06:35", "pasoTerminal": null, "llegadaTrinidad": "06:55", "llegadaMedinas": "07:05", "llegadaMonteagudo": null, "destinoFinal": "Medinas", "nota": null },
+      { "id": "g-ida-4", "salidaTerminal": null, "salidaItaliaColon": "07:00", "pasoTerminal": null, "llegadaTrinidad": "07:25", "llegadaMedinas": "07:30 (C.C.Rey)", "llegadaMonteagudo": null, "destinoFinal": "Col. Cristo Rey", "nota": "Servicio escolar" },
+      { "id": "g-ida-5", "salidaTerminal": null, "salidaItaliaColon": "07:15", "pasoTerminal": "07:25", "llegadaTrinidad": "07:50", "llegadaMedinas": "08:00", "llegadaMonteagudo": null, "destinoFinal": "Medinas", "nota": "Pasa por Terminal a las 07:25" },
+      { "id": "g-ida-6", "salidaTerminal": "07:30", "salidaItaliaColon": "07:40", "pasoTerminal": null, "llegadaTrinidad": "08:05", "llegadaMedinas": null, "llegadaMonteagudo": "08:25 (S.C.)", "destinoFinal": "San Carlos", "nota": "Termina en San Carlos" },
+      { "id": "g-ida-7", "salidaTerminal": null, "salidaItaliaColon": "08:20", "pasoTerminal": null, "llegadaTrinidad": "08:45", "llegadaMedinas": "08:50 (C.C.Rey)", "llegadaMonteagudo": null, "destinoFinal": "Col. Cristo Rey", "nota": null },
+      { "id": "g-ida-8", "salidaTerminal": "08:30", "salidaItaliaColon": "08:40", "pasoTerminal": null, "llegadaTrinidad": "09:05", "llegadaMedinas": "09:15", "llegadaMonteagudo": null, "destinoFinal": "Medinas", "nota": null },
+      { "id": "g-ida-9", "salidaTerminal": null, "salidaItaliaColon": "09:35", "pasoTerminal": null, "llegadaTrinidad": "10:00", "llegadaMedinas": "C.C.Rey", "llegadaMonteagudo": null, "destinoFinal": "Col. Cristo Rey", "nota": null },
+      { "id": "g-ida-10", "salidaTerminal": null, "salidaItaliaColon": "10:00", "pasoTerminal": null, "llegadaTrinidad": "10:25", "llegadaMedinas": "10:35", "llegadaMonteagudo": null, "destinoFinal": "Medinas", "nota": null },
+      { "id": "g-ida-11", "salidaTerminal": null, "salidaItaliaColon": "10:40", "pasoTerminal": "10:50", "llegadaTrinidad": "11:10", "llegadaMedinas": "11:20", "llegadaMonteagudo": null, "destinoFinal": "Medinas", "nota": "Pasa por Terminal a las 10:50" },
+      { "id": "g-ida-12", "salidaTerminal": "C.V.", "salidaItaliaColon": "11:10", "pasoTerminal": null, "llegadaTrinidad": "11:40 (Plaza)", "llegadaMedinas": null, "llegadaMonteagudo": "11:50 (S.C.)", "destinoFinal": "San Carlos", "nota": "Por Camino Viejo" },
+      { "id": "g-ida-13", "salidaTerminal": "11:15", "salidaItaliaColon": "11:25", "pasoTerminal": null, "llegadaTrinidad": "11:50", "llegadaMedinas": "12:00", "llegadaMonteagudo": null, "destinoFinal": "Medinas", "nota": null },
+      { "id": "g-ida-14", "salidaTerminal": "11:30", "salidaItaliaColon": "11:40", "pasoTerminal": null, "llegadaTrinidad": "12:05", "llegadaMedinas": "X Ingenio", "llegadaMonteagudo": "13:00", "destinoFinal": "Monteagudo", "nota": "Por Ingenio La Trinidad" },
+      { "id": "g-ida-15", "salidaTerminal": "12:00", "salidaItaliaColon": "12:10", "pasoTerminal": null, "llegadaTrinidad": "12:35", "llegadaMedinas": "12:45", "llegadaMonteagudo": null, "destinoFinal": "Medinas", "nota": null },
+      { "id": "g-ida-16", "salidaTerminal": "12:35", "salidaItaliaColon": "12:40", "pasoTerminal": null, "llegadaTrinidad": "13:05", "llegadaMedinas": "X Ingenio", "llegadaMonteagudo": "13:40", "destinoFinal": "Monteagudo", "nota": "Por Ingenio La Trinidad" },
+      { "id": "g-ida-17", "salidaTerminal": null, "salidaItaliaColon": "13:20", "pasoTerminal": "13:30", "llegadaTrinidad": "13:55", "llegadaMedinas": "14:05", "llegadaMonteagudo": null, "destinoFinal": "Medinas", "nota": "Pasa por Terminal a las 13:30" },
+      { "id": "g-ida-18", "salidaTerminal": null, "salidaItaliaColon": "14:05", "pasoTerminal": null, "llegadaTrinidad": "14:30", "llegadaMedinas": "C.C.Rey", "llegadaMonteagudo": null, "destinoFinal": "Col. Cristo Rey", "nota": null },
+      { "id": "g-ida-19", "salidaTerminal": "14:40", "salidaItaliaColon": "14:50", "pasoTerminal": null, "llegadaTrinidad": "15:10", "llegadaMedinas": "15:20", "llegadaMonteagudo": null, "destinoFinal": "Medinas", "nota": null },
+      { "id": "g-ida-20", "salidaTerminal": "14:50", "salidaItaliaColon": "15:00", "pasoTerminal": null, "llegadaTrinidad": "15:20", "llegadaMedinas": null, "llegadaMonteagudo": "15:50", "destinoFinal": "Monteagudo", "nota": null },
+      { "id": "g-ida-21", "salidaTerminal": null, "salidaItaliaColon": "16:50", "pasoTerminal": null, "llegadaTrinidad": "17:15", "llegadaMedinas": "17:25", "llegadaMonteagudo": null, "destinoFinal": "Medinas", "nota": null },
+      { "id": "g-ida-22", "salidaTerminal": "17:25", "salidaItaliaColon": "17:35", "pasoTerminal": null, "llegadaTrinidad": "18:05", "llegadaMedinas": "C.C.Rey", "llegadaMonteagudo": null, "destinoFinal": "Col. Cristo Rey", "nota": null },
+      { "id": "g-ida-23", "salidaTerminal": "18:25", "salidaItaliaColon": "18:35", "pasoTerminal": null, "llegadaTrinidad": "19:00", "llegadaMedinas": "19:15", "llegadaMonteagudo": null, "destinoFinal": "Medinas", "nota": null },
+      { "id": "g-ida-24", "salidaTerminal": "18:50", "salidaItaliaColon": "19:00", "pasoTerminal": null, "llegadaTrinidad": "19:25", "llegadaMedinas": "X Ingenio", "llegadaMonteagudo": "20:00", "destinoFinal": "Monteagudo", "nota": "Por Ingenio La Trinidad" },
+      { "id": "g-ida-25", "salidaTerminal": null, "salidaItaliaColon": "20:10", "pasoTerminal": "20:20", "llegadaTrinidad": "20:45", "llegadaMedinas": "20:55", "llegadaMonteagudo": null, "destinoFinal": "Medinas", "nota": "Pasa por Terminal a las 20:20" },
+      { "id": "g-ida-26", "salidaTerminal": "21:30", "salidaItaliaColon": "21:40", "pasoTerminal": null, "llegadaTrinidad": "22:05", "llegadaMedinas": "22:15", "llegadaMonteagudo": null, "destinoFinal": "Medinas", "nota": null },
+      { "id": "g-ida-27", "salidaTerminal": "22:00", "salidaItaliaColon": "22:10", "pasoTerminal": null, "llegadaTrinidad": "22:35", "llegadaMedinas": "22:45", "llegadaMonteagudo": null, "destinoFinal": "Medinas", "nota": null },
+      { "id": "g-ida-28", "salidaTerminal": "23:20", "salidaItaliaColon": "23:30", "pasoTerminal": null, "llegadaTrinidad": "23:55", "llegadaMedinas": "C.C.Rey", "llegadaMonteagudo": null, "destinoFinal": "Col. Cristo Rey", "nota": "Último servicio de ida" }
+    ],
+    "vuelta": [
+      { "id": "g-vta-1", "salidaMonteagudo": null, "salidaMedinas": "05:35", "salidaTrinidad": "05:45", "llegadaConcepcion": "06:05", "llegadaTerminal": "06:15", "destinoEspecial": "Terminal", "nota": "Hasta Terminal" },
+      { "id": "g-vta-2", "salidaMonteagudo": "06:30", "salidaMedinas": null, "salidaTrinidad": "07:10", "llegadaConcepcion": "07:35", "llegadaTerminal": "B.M.", "destinoEspecial": "Esc. Benjamín Matienzo", "nota": "Llega a Esc. Matienzo" },
+      { "id": "g-vta-3", "salidaMonteagudo": "06:35 (Sta. Rita)", "salidaMedinas": null, "salidaTrinidad": "06:40", "llegadaConcepcion": "07:00", "llegadaTerminal": "FRANCIA", "destinoEspecial": "Esc. Rep. de Francia", "nota": "Sale de Santa Rita" },
+      { "id": "g-vta-4", "salidaMonteagudo": null, "salidaMedinas": "06:40", "salidaTrinidad": "06:50", "llegadaConcepcion": "07:10", "llegadaTerminal": "SHIPTON", "destinoEspecial": "Esc. Shipton", "nota": "Llega a Esc. Shipton" },
+      { "id": "g-vta-5", "salidaMonteagudo": null, "salidaMedinas": "07:10", "salidaTrinidad": "07:20", "llegadaConcepcion": "07:45", "llegadaTerminal": "FRANCIA", "destinoEspecial": "Esc. Rep. de Francia", "nota": "Llega a Esc. Francia" },
+      { "id": "g-vta-6", "salidaMonteagudo": "07:40 (C.C.Rey)", "salidaMedinas": null, "salidaTrinidad": "07:45", "llegadaConcepcion": "08:05", "llegadaTerminal": "TERMINAL", "destinoEspecial": "Terminal", "nota": "Sale de Cristo Rey" },
+      { "id": "g-vta-7", "salidaMonteagudo": "07:20", "salidaMedinas": null, "salidaTrinidad": "08:05", "llegadaConcepcion": "08:30", "llegadaTerminal": "B.M.", "destinoEspecial": "Esc. Benjamín Matienzo", "nota": "Llega a Esc. Matienzo" },
+      { "id": "g-vta-8", "salidaMonteagudo": null, "salidaMedinas": "08:10", "salidaTrinidad": "08:20", "llegadaConcepcion": "08:45", "llegadaTerminal": "B.M.", "destinoEspecial": "Esc. Benjamín Matienzo", "nota": "Llega a Esc. Matienzo" },
+      { "id": "g-vta-9", "salidaMonteagudo": "08:25 (S.C.)", "salidaMedinas": "08:40 (C.V.)", "salidaTrinidad": null, "llegadaConcepcion": "09:10", "llegadaTerminal": "B.M.", "destinoEspecial": "Esc. Benjamín Matienzo", "nota": "Camino Viejo (no pasa x Trinidad)" },
+      { "id": "g-vta-10", "salidaMonteagudo": "09:10 (C.C.Rey)", "salidaMedinas": null, "salidaTrinidad": "09:15", "llegadaConcepcion": "09:35", "llegadaTerminal": "B.M.", "destinoEspecial": "Esc. Benjamín Matienzo", "nota": "Sale de Cristo Rey" },
+      { "id": "g-vta-11", "salidaMonteagudo": null, "salidaMedinas": "09:25", "salidaTrinidad": "09:35", "llegadaConcepcion": "10:00", "llegadaTerminal": "B.M.", "destinoEspecial": "Esc. Benjamín Matienzo", "nota": "Llega a Esc. Matienzo" },
+      { "id": "g-vta-12", "salidaMonteagudo": "10:00 (C.C.Rey)", "salidaMedinas": null, "salidaTrinidad": "10:05", "llegadaConcepcion": "10:25", "llegadaTerminal": "B.M.", "destinoEspecial": "Esc. Benjamín Matienzo", "nota": "Sale de Cristo Rey" },
+      { "id": "g-vta-13", "salidaMonteagudo": null, "salidaMedinas": "10:35", "salidaTrinidad": "10:45", "llegadaConcepcion": "11:10", "llegadaTerminal": "FRANCIA", "destinoEspecial": "Esc. Rep. de Francia", "nota": "Llega a Esc. Francia" },
+      { "id": "g-vta-14", "salidaMonteagudo": null, "salidaMedinas": "12:00", "salidaTrinidad": "12:10", "llegadaConcepcion": "12:35", "llegadaTerminal": "12:40", "destinoEspecial": "Terminal", "nota": "Hasta Terminal" },
+      { "id": "g-vta-15", "salidaMonteagudo": null, "salidaMedinas": "12:30", "salidaTrinidad": "12:40", "llegadaConcepcion": "13:05", "llegadaTerminal": "13:15", "destinoEspecial": "Terminal", "nota": "Hasta Terminal" },
+      { "id": "g-vta-16", "salidaMonteagudo": "12:40 (S.C.)", "salidaMedinas": null, "salidaTrinidad": "12:50", "llegadaConcepcion": "13:15", "llegadaTerminal": "TERMINAL", "destinoEspecial": "Terminal", "nota": "Sale de San Carlos" },
+      { "id": "g-vta-17", "salidaMonteagudo": "13:00 (Sta. Rita)", "salidaMedinas": null, "salidaTrinidad": "13:05", "llegadaConcepcion": "13:30", "llegadaTerminal": "TERMINAL", "destinoEspecial": "Terminal", "nota": "Sale de Santa Rita" },
+      { "id": "g-vta-18", "salidaMonteagudo": "13:00", "salidaMedinas": "X Ingenio", "salidaTrinidad": "13:40", "llegadaConcepcion": "14:05", "llegadaTerminal": "B.M.", "destinoEspecial": "Esc. Benjamín Matienzo", "nota": "Pasa por Ingenio" },
+      { "id": "g-vta-19", "salidaMonteagudo": null, "salidaMedinas": "14:05", "salidaTrinidad": "14:15", "llegadaConcepcion": "14:35", "llegadaTerminal": "14:45", "destinoEspecial": "Terminal", "nota": "Hasta Terminal" },
+      { "id": "g-vta-20", "salidaMonteagudo": null, "salidaMedinas": "15:45", "salidaTrinidad": "15:55", "llegadaConcepcion": "16:20", "llegadaTerminal": "TERMINAL", "destinoEspecial": "Terminal", "nota": "Hasta Terminal" },
+      { "id": "g-vta-21", "salidaMonteagudo": "15:50", "salidaMedinas": "X Ingenio", "salidaTrinidad": "16:30", "llegadaConcepcion": "16:50", "llegadaTerminal": "B.M.", "destinoEspecial": "Esc. Benjamín Matienzo", "nota": "Pasa por Ingenio" },
+      { "id": "g-vta-22", "salidaMonteagudo": null, "salidaMedinas": "17:30", "salidaTrinidad": "17:40", "llegadaConcepcion": "18:05", "llegadaTerminal": "FRANCIA", "destinoEspecial": "Esc. Rep. de Francia", "nota": "Llega a Esc. Francia" },
+      { "id": "g-vta-23", "salidaMonteagudo": "18:05 (C.C.Rey)", "salidaMedinas": null, "salidaTrinidad": "18:10", "llegadaConcepcion": "18:35", "llegadaTerminal": "SHIPTON", "destinoEspecial": "Esc. Shipton", "nota": "Sale de Cristo Rey" },
+      { "id": "g-vta-24", "salidaMonteagudo": null, "salidaMedinas": "19:25", "salidaTrinidad": "19:35", "llegadaConcepcion": "20:00", "llegadaTerminal": "20:20", "destinoEspecial": "Terminal", "nota": "Hasta Terminal" },
+      { "id": "g-vta-25", "salidaMonteagudo": "20:00", "salidaMedinas": "X Ingenio", "salidaTrinidad": "20:40", "llegadaConcepcion": "21:05", "llegadaTerminal": "FRANCIA", "destinoEspecial": "Esc. Rep. de Francia", "nota": "Pasa por Ingenio" },
+      { "id": "g-vta-26", "salidaMonteagudo": null, "salidaMedinas": "20:55", "salidaTrinidad": "21:05", "llegadaConcepcion": "21:30", "llegadaTerminal": "BELGRANO", "destinoEspecial": "Esc./Calle Belgrano", "nota": "Llega a Belgrano" },
+      { "id": "g-vta-27", "salidaMonteagudo": null, "salidaMedinas": "22:20", "salidaTrinidad": "22:30", "llegadaConcepcion": "22:50", "llegadaTerminal": "TERMINAL", "destinoEspecial": "Terminal", "nota": "Hasta Terminal" },
+      { "id": "g-vta-28", "salidaMonteagudo": "23:55 (C.C.Rey)", "salidaMedinas": null, "salidaTrinidad": "00:00", "llegadaConcepcion": "00:15", "llegadaTerminal": "TALLER", "destinoEspecial": "Taller", "nota": "Directo a taller" }
+    ]
+  },
+  "sabados": {
+    "ida": [
+      { "id": "g-sab-ida-1", "salidaTerminal": null, "salidaItaliaColon": "08:40", "pasoTerminal": "08:50", "llegadaTrinidad": "09:05", "llegadaMedinas": "09:15", "llegadaMonteagudo": null, "destinoFinal": "Medinas", "nota": "Pasa por Terminal a las 08:50" },
+      { "id": "g-sab-ida-2", "salidaTerminal": "09:50", "salidaItaliaColon": "10:00", "pasoTerminal": null, "llegadaTrinidad": "10:25", "llegadaMedinas": "10:35", "llegadaMonteagudo": null, "destinoFinal": "Medinas", "nota": null },
+      { "id": "g-sab-ida-3", "salidaTerminal": "11:30", "salidaItaliaColon": "11:40", "pasoTerminal": null, "llegadaTrinidad": "12:05", "llegadaMedinas": "X Ingenio", "llegadaMonteagudo": "12:40", "destinoFinal": "Monteagudo", "nota": "Por Ingenio La Trinidad" },
+      { "id": "g-sab-ida-4", "salidaTerminal": "12:00", "salidaItaliaColon": "12:10", "pasoTerminal": null, "llegadaTrinidad": "12:35", "llegadaMedinas": "12:45", "llegadaMonteagudo": null, "destinoFinal": "Medinas", "nota": null },
+      { "id": "g-sab-ida-5", "salidaTerminal": null, "salidaItaliaColon": "13:20", "pasoTerminal": "13:30", "llegadaTrinidad": "13:45", "llegadaMedinas": "13:55", "llegadaMonteagudo": null, "destinoFinal": "Medinas", "nota": "Pasa por Terminal a las 13:30" },
+      { "id": "g-sab-ida-6", "salidaTerminal": null, "salidaItaliaColon": "16:50", "pasoTerminal": null, "llegadaTrinidad": "17:15", "llegadaMedinas": "17:25", "llegadaMonteagudo": null, "destinoFinal": "Medinas", "nota": null },
+      { "id": "g-sab-ida-7", "salidaTerminal": "18:25", "salidaItaliaColon": "18:35", "pasoTerminal": null, "llegadaTrinidad": "19:15", "llegadaMedinas": "19:20", "llegadaMonteagudo": null, "destinoFinal": "Medinas", "nota": null },
+      { "id": "g-sab-ida-8", "salidaTerminal": null, "salidaItaliaColon": "20:00", "pasoTerminal": null, "llegadaTrinidad": "20:25", "llegadaMedinas": "20:35", "llegadaMonteagudo": null, "destinoFinal": "Medinas", "nota": null },
+      { "id": "g-sab-ida-9", "salidaTerminal": null, "salidaItaliaColon": "21:30", "pasoTerminal": "21:40", "llegadaTrinidad": "21:50", "llegadaMedinas": "22:00", "llegadaMonteagudo": null, "destinoFinal": "Medinas", "nota": "Pasa por Terminal a las 21:40" }
+    ],
+    "vuelta": [
+      { "id": "g-sab-vta-1", "salidaMonteagudo": null, "salidaMedinas": "07:20", "salidaTrinidad": "07:30", "llegadaConcepcion": "07:50", "llegadaTerminal": "08:00", "destinoEspecial": "Terminal", "nota": "Hasta Terminal" },
+      { "id": "g-sab-vta-2", "salidaMonteagudo": "07:20", "salidaMedinas": "X Ingenio", "salidaTrinidad": "08:05", "llegadaConcepcion": "08:30", "llegadaTerminal": "08:50", "destinoEspecial": "Terminal", "nota": "Pasa por Ingenio" },
+      { "id": "g-sab-vta-3", "salidaMonteagudo": null, "salidaMedinas": "09:25", "salidaTrinidad": "09:35", "llegadaConcepcion": "09:55", "llegadaTerminal": "FRANCIA", "destinoEspecial": "Esc. Rep. de Francia", "nota": "Llega a Esc. Francia" },
+      { "id": "g-sab-vta-4", "salidaMonteagudo": null, "salidaMedinas": "10:35", "salidaTrinidad": "10:45", "llegadaConcepcion": "11:05", "llegadaTerminal": "BELGRANO", "destinoEspecial": "Esc./Calle Belgrano", "nota": "Llega a Belgrano" },
+      { "id": "g-sab-vta-5", "salidaMonteagudo": null, "salidaMedinas": "12:45", "salidaTrinidad": "12:55", "llegadaConcepcion": "13:20", "llegadaTerminal": "13:30", "destinoEspecial": "Terminal", "nota": "Hasta Terminal" },
+      { "id": "g-sab-vta-6", "salidaMonteagudo": null, "salidaMedinas": "15:50", "salidaTrinidad": "16:00", "llegadaConcepcion": "16:20", "llegadaTerminal": "16:30", "destinoEspecial": "Terminal", "nota": "Hasta Terminal" },
+      { "id": "g-sab-vta-7", "salidaMonteagudo": null, "salidaMedinas": "17:30", "salidaTrinidad": "17:40", "llegadaConcepcion": "18:05", "llegadaTerminal": "FRANCIA", "destinoEspecial": "Esc. Rep. de Francia", "nota": "Llega a Esc. Francia" },
+      { "id": "g-sab-vta-8", "salidaMonteagudo": null, "salidaMedinas": "19:20", "salidaTrinidad": "19:30", "llegadaConcepcion": "19:55", "llegadaTerminal": "20:05", "destinoEspecial": "Terminal", "nota": "Hasta Terminal" },
+      { "id": "g-sab-vta-9", "salidaMonteagudo": null, "salidaMedinas": "20:35", "salidaTrinidad": "20:45", "llegadaConcepcion": "21:10", "llegadaTerminal": null, "destinoEspecial": "Concepción", "nota": null }
+    ]
+  },
+  "domingos": {
+    "ida": [
+      { "id": "g-dom-ida-1", "salidaTerminal": null, "salidaItaliaColon": "08:00", "salidaConcepcion24Colon": "08:00", "pasoTerminal": null, "llegadaTrinidad": "08:20", "llegadaMedinas": "08:30", "llegadaMonteagudo": null, "destinoFinal": "Medinas", "nota": "Sale de 24 de Sept. y Colón" },
+      { "id": "g-dom-ida-2", "salidaTerminal": null, "salidaItaliaColon": "11:40", "salidaConcepcion24Colon": "11:40", "pasoTerminal": null, "llegadaTrinidad": "12:05", "llegadaMedinas": "12:15", "llegadaMonteagudo": null, "destinoFinal": "Medinas", "nota": "Sale de 24 de Sept. y Colón" },
+      { "id": "g-dom-ida-3", "salidaTerminal": null, "salidaItaliaColon": "17:20", "salidaConcepcion24Colon": "17:20", "pasoTerminal": null, "llegadaTrinidad": "17:45", "llegadaMedinas": "17:55", "llegadaMonteagudo": null, "destinoFinal": "Medinas", "nota": "Sale de 24 de Sept. y Colón" }
+    ],
+    "vuelta": [
+      { "id": "g-dom-vta-1", "salidaMonteagudo": null, "salidaMedinas": "08:30", "salidaTrinidad": "08:40", "pasoTrinidad": "08:40", "llegadaConcepcion": "09:00", "llegadaTerminal": null, "destinoEspecial": "Concepción", "nota": "Llega a 24 de Sept. y Colón" },
+      { "id": "g-dom-vta-2", "salidaMonteagudo": null, "salidaMedinas": "12:15", "salidaTrinidad": "12:25", "pasoTrinidad": "12:25", "llegadaConcepcion": "12:45", "llegadaTerminal": null, "destinoEspecial": "Concepción", "nota": "Llega a 24 de Sept. y Colón" },
+      { "id": "g-dom-vta-3", "salidaMonteagudo": null, "salidaMedinas": "17:55", "salidaTrinidad": "18:05", "pasoTrinidad": "18:05", "llegadaConcepcion": "18:25", "llegadaTerminal": null, "destinoEspecial": "Concepción", "nota": "Llega a 24 de Sept. y Colón" }
+    ]
+  }
 }
